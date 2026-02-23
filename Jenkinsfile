@@ -5,6 +5,7 @@ pipeline {
         DOCKER_REGISTRY = 'your-registry.azurecr.io'
         SONAR_HOST = 'http://sonarqube:9000'
         SONAR_TOKEN = credentials('sonar-token')
+        SERVICES = ['Product.API', 'Order.API', 'Recommendation.API', 'ApiGateway']
     }
 
     stages {
@@ -17,63 +18,38 @@ pipeline {
 
         stage('Restore & Build') {
             parallel {
-                stage('Product API') {
-                    steps {
-                        dir('Product.API') {
-                            sh 'dotnet restore'
-                            sh 'dotnet build -c Release'
-                        }
-                    }
-                }
-                stage('Order API') {
-                    steps {
-                        dir('Order.API') {
-                            sh 'dotnet restore'
-                            sh 'dotnet build -c Release'
-                        }
-                    }
-                }
-                stage('Recommendation API') {
-                    steps {
-                        dir('Recommendation.API') {
-                            sh 'dotnet restore'
-                            sh 'dotnet build -c Release'
+                script {
+                    SERVICES.each { service ->
+                        stage("Build ${service}") {
+                            dir(service) {
+                                sh 'dotnet restore'
+                                sh 'dotnet build -c Release'
+                            }
                         }
                     }
                 }
             }
         }
 
-        stage('Unit Tests') {
+        stage('Unit Tests & Coverage') {
             parallel {
-                stage('Product Tests') {
-                    steps {
-                        dir('Product.API') {
-                            sh 'dotnet test --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"'
+                script {
+                    SERVICES.findAll { it != 'ApiGateway' }.each { service ->
+                        stage("Test ${service}") {
+                            dir(service) {
+                                sh '''
+                                    dotnet test --no-build -c Release \
+                                        --logger "trx;LogFileName=results.trx" \
+                                        --results-directory TestResults \
+                                        --collect:"XPlat Code Coverage"
+                                '''
+                                junit allowEmptyResults: true, testResults: '**/TestResults/*.trx'
+                                publishCoverage adapters: [coberturaAdapter('**/TestResults/coverage.cobertura.xml')]
+                                archiveArtifacts artifacts: '**/TestResults/**', allowEmptyArchive: true
+                            }
                         }
                     }
                 }
-                stage('Order Tests') {
-                    steps {
-                        dir('Order.API') {
-                            sh 'dotnet test --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"'
-                        }
-                    }
-                }
-                stage('Recommendation Tests') {
-                    steps {
-                        dir('Recommendation.API') {
-                            sh 'dotnet test --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"'
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Publish Results') {
-            steps {
-                junit allowEmptyResults: true, testResults: '**/TestResults/*.trx'
-                publishCoverage adapters: [coberturaAdapter('**/coverage.cobertura.xml')]
             }
         }
 
@@ -85,7 +61,7 @@ pipeline {
                             /k:"marketplace" \
                             /d:sonar.host.url="${SONAR_HOST}" \
                             /d:sonar.token="${SONAR_TOKEN}" \
-                            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+                            /d:sonar.cs.opencover.reportsPaths="**/TestResults/coverage.opencover.xml"
                         dotnet build -c Release
                         dotnet sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
                     """
@@ -117,44 +93,16 @@ pipeline {
         stage('Docker Build & Push') {
             when { branch 'main' }
             parallel {
-                stage('Build Product API') {
-                    steps {
-                        sh """
-                            docker build -t ${DOCKER_REGISTRY}/product-api:${BUILD_NUMBER} ./Product.API
-                            docker push ${DOCKER_REGISTRY}/product-api:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY}/product-api:${BUILD_NUMBER} ${DOCKER_REGISTRY}/product-api:latest
-                            docker push ${DOCKER_REGISTRY}/product-api:latest
-                        """
-                    }
-                }
-                stage('Build Order API') {
-                    steps {
-                        sh """
-                            docker build -t ${DOCKER_REGISTRY}/order-api:${BUILD_NUMBER} ./Order.API
-                            docker push ${DOCKER_REGISTRY}/order-api:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY}/order-api:${BUILD_NUMBER} ${DOCKER_REGISTRY}/order-api:latest
-                            docker push ${DOCKER_REGISTRY}/order-api:latest
-                        """
-                    }
-                }
-                stage('Build Recommendation API') {
-                    steps {
-                        sh """
-                            docker build -t ${DOCKER_REGISTRY}/recommendation-api:${BUILD_NUMBER} ./Recommendation.API
-                            docker push ${DOCKER_REGISTRY}/recommendation-api:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY}/recommendation-api:${BUILD_NUMBER} ${DOCKER_REGISTRY}/recommendation-api:latest
-                            docker push ${DOCKER_REGISTRY}/recommendation-api:latest
-                        """
-                    }
-                }
-                stage('Build API Gateway') {
-                    steps {
-                        sh """
-                            docker build -t ${DOCKER_REGISTRY}/apigateway:${BUILD_NUMBER} ./ApiGateway
-                            docker push ${DOCKER_REGISTRY}/apigateway:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY}/apigateway:${BUILD_NUMBER} ${DOCKER_REGISTRY}/apigateway:latest
-                            docker push ${DOCKER_REGISTRY}/apigateway:latest
-                        """
+                script {
+                    SERVICES.each { service ->
+                        stage("Docker ${service}") {
+                            sh """
+                                docker build --pull -t ${DOCKER_REGISTRY}/${service.toLowerCase()}:${BUILD_NUMBER} ./${service}
+                                docker push ${DOCKER_REGISTRY}/${service.toLowerCase()}:${BUILD_NUMBER}
+                                docker tag ${DOCKER_REGISTRY}/${service.toLowerCase()}:${BUILD_NUMBER} ${DOCKER_REGISTRY}/${service.toLowerCase()}:latest
+                                docker push ${DOCKER_REGISTRY}/${service.toLowerCase()}:latest
+                            """
+                        }
                     }
                 }
             }
@@ -172,14 +120,17 @@ pipeline {
         stage('Integration Tests') {
             when { branch 'main' }
             steps {
-                retry(10) {
-                    sleep 10
-                    sh 'curl -f http://localhost:8001/health'
+                script {
+                    def healthPorts = [8001, 8004, 8005, 8000]
+                    healthPorts.each { port ->
+                        retry(10) {
+                            timeout(time: 30, unit: 'SECONDS') {
+                                sh "curl -f http://localhost:${port}/health"
+                            }
+                        }
+                    }
+                    echo "All health checks passed"
                 }
-                sh 'curl -f http://localhost:8004/health'
-                sh 'curl -f http://localhost:8005/health'
-                sh 'curl -f http://localhost:8000/health'
-                echo "All health checks passed"
             }
         }
     }
@@ -216,9 +167,7 @@ pipeline {
             )
         }
         always {
-            node('') {
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
