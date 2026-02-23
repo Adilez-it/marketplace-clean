@@ -211,7 +211,7 @@ pipeline {
                     <p><b>Duration:</b> ${currentBuild.durationString}</p>
                     <p><a href="${env.BUILD_URL}console">View Console Log</a></p>
                 """,
-                to: "ezarfi.adil.it@gmail.com",
+                to: "team@company.com",
                 mimeType: 'text/html'
             )
         }
