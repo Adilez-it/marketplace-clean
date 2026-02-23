@@ -72,7 +72,7 @@ pipeline {
 
         stage('Publish Results') {
             steps {
-                junit '**/TestResults/*.trx'
+                junit allowEmptyResults: true, testResults: '**/TestResults/*.trx'
                 publishCoverage adapters: [coberturaAdapter('**/coverage.cobertura.xml')]
             }
         }
