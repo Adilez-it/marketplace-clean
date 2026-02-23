@@ -274,9 +274,12 @@ pipeline {
     // ══════════════════════════════════════════
     post {
         always {
-            echo "📊 Publishing test results..."
-            junit allowEmptyResults: true,
-                  testResults: '**/TestResults/*.trx'
+            node('') {
+                echo "📊 Publishing test results..."
+                junit allowEmptyResults: true,
+                      testResults: '**/TestResults/*.trx'
+                cleanWs()
+            }
         }
         success {
             echo "✅ Pipeline réussi — Build #${BUILD_NUMBER}"
@@ -295,9 +298,6 @@ pipeline {
                 mimeType: 'text/html',
                 to: "team@company.com"
             )
-        }
-        cleanup {
-            cleanWs()
         }
     }
 }
