@@ -1,18 +1,8 @@
 pipeline {
     agent any
 
-    environment {
-        DOTNET_VERSION = "8.0"
-        COMPOSE_FILE = "docker-compose.yml"
-        DOCKER_BUILDKIT = "1"
-    }
-
     options {
         timestamps()
-    }
-
-    triggers {
-        githubPush()
     }
 
     stages {
@@ -23,56 +13,50 @@ pipeline {
             }
         }
 
-        stage('Restore Dependencies') {
+        stage('Restore') {
             steps {
-                sh 'dotnet restore'
+                bat 'dotnet restore'
             }
         }
 
-        stage('Build Solution') {
+        stage('Build') {
             steps {
-                sh 'dotnet build --no-restore --configuration Release'
+                bat 'dotnet build --configuration Release --no-restore'
             }
         }
 
-        stage('Run Tests') {
+        stage('Test') {
             steps {
-                sh 'dotnet test --no-build --configuration Release || true'
+                bat 'dotnet test --configuration Release --no-build'
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Docker Build') {
             steps {
-                sh 'docker compose build'
+                bat 'docker compose build'
             }
         }
 
-        stage('Start Services (Optional Staging)') {
-            when {
-                branch 'main'
-            }
+        stage('Docker Up') {
             steps {
-                sh 'docker compose down || true'
-                sh 'docker compose up -d'
+                bat 'docker compose down'
+                bat 'docker compose up -d'
             }
         }
 
-        stage('Cleanup Old Images') {
+        stage('Cleanup') {
             steps {
-                sh 'docker image prune -f'
+                bat 'docker image prune -f'
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline completed.'
-        }
         success {
-            echo 'Build successful 🚀'
+            echo '✅ Build Successful'
         }
         failure {
-            echo 'Build failed ❌'
+            echo '❌ Build Failed'
         }
     }
 }
