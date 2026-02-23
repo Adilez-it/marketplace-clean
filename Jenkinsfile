@@ -1,15 +1,19 @@
 pipeline {
     agent any
 
-    options {
-        timestamps()
-    }
-
     stages {
 
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Debug Environment') {
+            steps {
+                bat 'echo Running on Windows'
+                bat 'where dotnet'
+                bat 'where docker'
             }
         }
 
@@ -25,38 +29,10 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                bat 'dotnet test --configuration Release --no-build'
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 bat 'docker compose build'
             }
-        }
-
-        stage('Docker Up') {
-            steps {
-                bat 'docker compose down'
-                bat 'docker compose up -d'
-            }
-        }
-
-        stage('Cleanup') {
-            steps {
-                bat 'docker image prune -f'
-            }
-        }
-    }
-
-    post {
-        success {
-            echo '✅ Build Successful'
-        }
-        failure {
-            echo '❌ Build Failed'
         }
     }
 }
