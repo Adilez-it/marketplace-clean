@@ -43,13 +43,23 @@ pipeline {
                                         --results-directory TestResults \
                                         --collect:"XPlat Code Coverage"
                                 '''
-                                junit allowEmptyResults: true, testResults: '**/TestResults/*.trx'
-                                publishCoverage adapters: [coberturaAdapter('**/TestResults/coverage.cobertura.xml')]
-                                archiveArtifacts artifacts: '**/TestResults/**', allowEmptyArchive: true
                             }
                         }
                     }
                 }
+            }
+        }
+
+        stage('Publish Test Results & Coverage') {
+            steps {
+                // Archive all JUnit TRX files from any service
+                junit allowEmptyResults: true, testResults: '**/TestResults/**/*.trx'
+                
+                // Publish coverage reports (opencover -> cobertura)
+                publishCoverage adapters: [coberturaAdapter('**/TestResults/coverage.cobertura.xml')]
+                
+                // Archive artifacts for future reference
+                archiveArtifacts artifacts: '**/TestResults/**', allowEmptyArchive: true
             }
         }
 
