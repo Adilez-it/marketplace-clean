@@ -1,14 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\ApiGateway",
-    "\\Order.API\\API",
-    "\\Order.API\\API\\Controllers",
-    "\\Order.API\\Application",
-    "\\Order.API\\Application\\DTOs",
-    "\\Order.API\\Domain",
-    "\\Order.API\\Domain\\Enums"
+    "\\ApiGateway"
   ],
-  "SelectedNode": "\\ApiGateway\\appsettings.json",
+  "SelectedNode": "\\docker-compose.yml",
   "PreviewInSolutionExplorer": false
 }

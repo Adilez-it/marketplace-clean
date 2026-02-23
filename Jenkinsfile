@@ -4,6 +4,8 @@ pipeline {
     environment {
         JENKINS_PORT = '8080'
         NGROK_REGION = 'eu'
+        SONAR_HOST_URL = 'http://sonarqube:9000'  // ou http://localhost:9000 si problème de réseau
+        SONAR_TOKEN = credentials('sonarqube-token')  // À créer dans Jenkins
     }
     
     stages {
@@ -67,7 +69,7 @@ pipeline {
                         dir('D:/marketplace-clean/Product.API') {
                             bat 'dotnet restore'
                             bat 'dotnet build --configuration Release'
-                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage"'
+                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults'
                         }
                     }
                 }
@@ -76,7 +78,7 @@ pipeline {
                         dir('D:/marketplace-clean/Order.API') {
                             bat 'dotnet restore'
                             bat 'dotnet build --configuration Release'
-                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage"'
+                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults'
                         }
                     }
                 }
@@ -85,7 +87,7 @@ pipeline {
                         dir('D:/marketplace-clean/Recommendation.API') {
                             bat 'dotnet restore'
                             bat 'dotnet build --configuration Release'
-                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage"'
+                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults'
                         }
                     }
                 }
@@ -94,7 +96,64 @@ pipeline {
                         dir('D:/marketplace-clean/ApiGateway') {
                             bat 'dotnet restore'
                             bat 'dotnet build --configuration Release'
-                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage"'
+                            bat 'dotnet test --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            parallel {
+                stage('Product API Analysis') {
+                    steps {
+                        dir('D:/marketplace-clean/Product.API') {
+                            withSonarQubeEnv('sonarqube-local') {
+                                bat """
+                                    dotnet sonarscanner begin /k:"product-api" /n:"Product API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
+                                    dotnet build --configuration Release
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                                """
+                            }
+                        }
+                    }
+                }
+                stage('Order API Analysis') {
+                    steps {
+                        dir('D:/marketplace-clean/Order.API') {
+                            withSonarQubeEnv('sonarqube-local') {
+                                bat """
+                                    dotnet sonarscanner begin /k:"order-api" /n:"Order API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
+                                    dotnet build --configuration Release
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                                """
+                            }
+                        }
+                    }
+                }
+                stage('Recommendation API Analysis') {
+                    steps {
+                        dir('D:/marketplace-clean/Recommendation.API') {
+                            withSonarQubeEnv('sonarqube-local') {
+                                bat """
+                                    dotnet sonarscanner begin /k:"recommendation-api" /n:"Recommendation API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
+                                    dotnet build --configuration Release
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                                """
+                            }
+                        }
+                    }
+                }
+                stage('ApiGateway Analysis') {
+                    steps {
+                        dir('D:/marketplace-clean/ApiGateway') {
+                            withSonarQubeEnv('sonarqube-local') {
+                                bat """
+                                    dotnet sonarscanner begin /k:"apigateway" /n:"API Gateway" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
+                                    dotnet build --configuration Release
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                                """
+                            }
                         }
                     }
                 }
@@ -124,130 +183,99 @@ pipeline {
                 }
             }
         }
-        // Ajouter une étape de health check robuste
+        
         stage('Health Check') {
-    steps {
-        script {
-            // Remplacer timeout par ping (fonctionne dans Jenkins)
-            bat 'ping 127.0.0.1 -n 20 > nul'
-            
-            // Vérifier chaque service avec une approche plus robuste
-            def services = [
-                [name: 'API Gateway', url: 'http://localhost:8000/health', port: 8000],
-                [name: 'Product API', url: 'http://localhost:8001/health', port: 8001],
-                [name: 'Order API', url: 'http://localhost:8004/health', port: 8004],
-                [name: 'Recommendation API', url: 'http://localhost:8005/health', port: 8005]
-            ]
-            
-            // Attendre que tous les services soient prêts (max 2 minutes)
-            def maxRetries = 12
-            def allHealthy = false
-            
-            for (int i = 0; i < maxRetries; i++) {
-                echo "Tentative ${i+1}/${maxRetries} de vérification des services..."
-                allHealthy = true
-                
-                for (service in services) {
-                    // Utiliser un fichier temporaire pour capturer proprement la sortie
-                    def tempFile = "health_check_${service.name.replace(' ', '_')}.txt"
+            steps {
+                script {
+                    // Attendre que les services démarrent
+                    bat 'ping 127.0.0.1 -n 30 > nul'
                     
-                    // Exécuter curl et capturer le code HTTP dans un fichier
-                    bat """
-                        curl -s -o nul -w "%%{http_code}" --connect-timeout 5 --max-time 10 ${service.url} > ${tempFile} 2>&1
-                    """
+                    def services = [
+                        [name: 'API Gateway', url: 'http://localhost:8000/health'],
+                        [name: 'Product API', url: 'http://localhost:8001/health'],
+                        [name: 'Order API', url: 'http://localhost:8004/health'],
+                        [name: 'Recommendation API', url: 'http://localhost:8005/health'],
+                        [name: 'SonarQube', url: 'http://localhost:9000']
+                    ]
                     
-                    // Lire le résultat
-                    def result = readFile(file: tempFile).trim()
+                    def allHealthy = true
                     
-                    // Nettoyer le résultat (enlever les caractères indésirables)
-                    result = result.replaceAll('[^0-9]', '')
-                    
-                    if (result == '200') {
-                        echo "✅ ${service.name} - OK (HTTP 200)"
-                    } else if (result == '000' || result == '') {
-                        echo "⚠️ ${service.name} - Pas de réponse"
-                        allHealthy = false
-                    } else {
-                        echo "⚠️ ${service.name} - Réponse HTTP ${result}"
-                        allHealthy = false
+                    for (service in services) {
+                        def result = bat(
+                            script: "powershell -Command \"try { \$r = Invoke-WebRequest -Uri '${service.url}' -Method Head -UseBasicParsing -TimeoutSec 5; if (\$r.StatusCode -eq 200 -or \$r.StatusCode -eq 302) { '200' } else { \$r.StatusCode } } catch { '000' }\"",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (result == '200' || result == '302') {
+                            echo "✅ ${service.name} - OK"
+                        } else {
+                            echo "❌ ${service.name} - Échec (Code: ${result})"
+                            allHealthy = false
+                        }
                     }
                     
-                    // Nettoyer le fichier temporaire
-                    bat "del ${tempFile} 2>nul || exit 0"
-                }
-                
-                if (allHealthy) {
-                    echo "✅ Tous les services sont en bonne santé !"
-                    break
-                } else {
-                    if (i < maxRetries - 1) {
-                        echo "Attente de 10 secondes avant nouvelle tentative..."
-                        bat 'ping 127.0.0.1 -n 10 > nul'
+                    if (!allHealthy) {
+                        error("Health check failed")
                     }
                 }
-            }
-            
-            if (!allHealthy) {
-                echo "❌ Certains services ne répondent pas correctement"
-                
-                // Afficher les logs des services problématiques
-                bat '''
-                    echo "=== Logs détaillés des services ==="
-                    
-                    echo "----- API Gateway -----"
-                    docker-compose logs --tail=30 apigateway
-                    
-                    echo "----- Product API -----"
-                    docker-compose logs --tail=30 product.api
-                    
-                    echo "----- Order API -----"
-                    docker-compose logs --tail=30 order.api
-                    
-                    echo "----- Recommendation API -----"
-                    docker-compose logs --tail=30 recommendation.api
-                    
-                    echo "----- Vérification des conteneurs -----"
-                    docker-compose ps
-                    
-                    echo "----- Test direct avec curl verbose -----"
-                    curl -v http://localhost:8000/health
-                    curl -v http://localhost:8001/health
-                '''
-                
-                error("Health check failed - Les services ne répondent pas correctement")
             }
         }
-    }
-}
         
-        stage('Display Webhook Info') {
-            when {
-                expression { env.WEBHOOK_URL != null }
+        stage('Quality Gate Check') {
+            steps {
+                script {
+                    // Attendre que SonarQube termine l'analyse
+                    sleep(15)
+                    
+                    def projects = ['product-api', 'order-api', 'recommendation-api', 'apigateway']
+                    
+                    for (project in projects) {
+                        echo "Vérification du Quality Gate pour ${project}..."
+                        
+                        def qualityGate = bat(
+                            script: "curl -s -u ${SONAR_TOKEN}: \"${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${project}\"",
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "Résultat: ${qualityGate}"
+                        
+                        // Optionnel: Vérifier si le status est OK
+                        if (qualityGate.contains('"status":"OK"')) {
+                            echo "✅ Quality Gate OK pour ${project}"
+                        } else {
+                            echo "⚠️ Quality Gate non vérifié pour ${project}"
+                        }
+                    }
+                }
             }
+        }
+        
+        stage('Display Info') {
             steps {
                 script {
                     echo """
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║        🌐 WEBHOOK JENKINS PUBLIC - PRÊT À L'EMPLOI         ║
+║        🚀 MARKETPLACE DÉPLOYÉ AVEC SUCCÈS                   ║
+║                                                              ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║   📊 SonarQube          : http://localhost:9000             ║
+║      • admin / admin (changez le mot de passe)              ║
+║                                                              ║
+║   🔗 Jenkins Public     : ${env.WEBHOOK_URL}                ║
+║   🚀 API Gateway        : http://localhost:8000/swagger     ║
+║   📊 Portainer          : http://localhost:8888             ║
+║   🐰 RabbitMQ           : http://localhost:15672            ║
+║   🗄️ Neo4j Browser      : http://localhost:7474             ║
+║                                                              ║
+║   📝 Projets analysés :                                     ║
+║      • Product API                                          ║
+║      • Order API                                            ║
+║      • Recommendation API                                   ║
+║      • API Gateway                                          ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-
-📡 URL Publique Jenkins    : ${env.WEBHOOK_URL}
-🔗 Webhook GitHub          : ${env.WEBHOOK_URL}/github-webhook/
-
-📊 Interface ngrok         : http://localhost:4040
-
-⚙️ Configuration GitHub:
-   1. Allez dans Settings → Webhooks
-   2. Ajoutez: ${env.WEBHOOK_URL}/github-webhook/
-   3. Content type: application/json
-
-📝 Les URLs de vos services:
-   • API Gateway     : http://localhost:8000
-   • Product API     : http://localhost:8001
-   • Order API       : http://localhost:8004
-   • Recommendation  : http://localhost:8005
                     """
                 }
             }
@@ -257,17 +285,26 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
+            
+            // Sauvegarder l'URL pour référence
+            if (env.WEBHOOK_URL) {
+                writeFile file: 'last_webhook_url.txt', text: env.WEBHOOK_URL
+            }
         }
         failure {
             echo '❌ Pipeline failed! Vérifiez les logs ci-dessus.'
+            
+            // Afficher les logs des services en cas d'échec
+            bat '''
+                echo "=== Logs des services en échec ==="
+                docker-compose logs --tail=50 apigateway
+                docker-compose logs --tail=50 product.api
+                docker-compose ps
+            '''
         }
         always {
-            script {
-                // Sauvegarder l'URL pour référence
-                if (env.WEBHOOK_URL) {
-                    writeFile file: 'last_webhook_url.txt', text: env.WEBHOOK_URL
-                }
-            }
+            // Archiver les résultats des tests
+            junit '**/TestResults/*.xml'
         }
     }
 }
