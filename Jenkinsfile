@@ -126,73 +126,99 @@ pipeline {
         }
         
         stage('Health Check') {
-            steps {
-                script {
-                    // Remplacer timeout par ping (fonctionne dans Jenkins) [citation:3]
-                    bat 'ping 127.0.0.1 -n 20 > nul'
+    steps {
+        script {
+            // Remplacer timeout par ping (fonctionne dans Jenkins)
+            bat 'ping 127.0.0.1 -n 20 > nul'
+            
+            // Vérifier chaque service avec une approche plus robuste
+            def services = [
+                [name: 'API Gateway', url: 'http://localhost:8000/health', port: 8000],
+                [name: 'Product API', url: 'http://localhost:8001/health', port: 8001],
+                [name: 'Order API', url: 'http://localhost:8004/health', port: 8004],
+                [name: 'Recommendation API', url: 'http://localhost:8005/health', port: 8005]
+            ]
+            
+            // Attendre que tous les services soient prêts (max 2 minutes)
+            def maxRetries = 12
+            def allHealthy = false
+            
+            for (int i = 0; i < maxRetries; i++) {
+                echo "Tentative ${i+1}/${maxRetries} de vérification des services..."
+                allHealthy = true
+                
+                for (service in services) {
+                    // Utiliser un fichier temporaire pour capturer proprement la sortie
+                    def tempFile = "health_check_${service.name.replace(' ', '_')}.txt"
                     
-                    // Vérifier chaque service avec un timeout [citation:4]
-                    def services = [
-                        [name: 'API Gateway', url: 'http://localhost:8000/health', port: 8000],
-                        [name: 'Product API', url: 'http://localhost:8001/health', port: 8001],
-                        [name: 'Order API', url: 'http://localhost:8004/health', port: 8004],
-                        [name: 'Recommendation API', url: 'http://localhost:8005/health', port: 8005]
-                    ]
+                    // Exécuter curl et capturer le code HTTP dans un fichier
+                    bat """
+                        curl -s -o nul -w "%%{http_code}" --connect-timeout 5 --max-time 10 ${service.url} > ${tempFile} 2>&1
+                    """
                     
-                    // Attendre que tous les services soient prêts (max 2 minutes)
-                    def maxRetries = 12
-                    def allHealthy = false
+                    // Lire le résultat
+                    def result = readFile(file: tempFile).trim()
                     
-                    for (int i = 0; i < maxRetries; i++) {
-                        echo "Tentative ${i+1}/${maxRetries} de vérification des services..."
-                        allHealthy = true
-                        
-                        for (service in services) {
-                            // Utiliser curl avec timeout et --retry pour plus de robustesse
-                            def result = bat(
-                                script: "curl -s -o nul -w \"%%{http_code}\" --connect-timeout 5 --max-time 10 ${service.url}",
-                                returnStdout: true
-                            ).trim()
-                            
-                            if (result == '200') {
-                                echo "✅ ${service.name} - OK (HTTP 200)"
-                            } else if (result == '000') {
-                                echo "⚠️ ${service.name} - Pas de réponse (connexion refusée)"
-                                allHealthy = false
-                            } else {
-                                echo "⚠️ ${service.name} - Réponse HTTP ${result}"
-                                allHealthy = false
-                            }
-                        }
-                        
-                        if (allHealthy) {
-                            echo "✅ Tous les services sont en bonne santé !"
-                            break
-                        } else {
-                            if (i < maxRetries - 1) {
-                                echo "Attente de 10 secondes avant nouvelle tentative..."
-                                bat 'ping 127.0.0.1 -n 10 > nul'
-                            }
-                        }
+                    // Nettoyer le résultat (enlever les caractères indésirables)
+                    result = result.replaceAll('[^0-9]', '')
+                    
+                    if (result == '200') {
+                        echo "✅ ${service.name} - OK (HTTP 200)"
+                    } else if (result == '000' || result == '') {
+                        echo "⚠️ ${service.name} - Pas de réponse"
+                        allHealthy = false
+                    } else {
+                        echo "⚠️ ${service.name} - Réponse HTTP ${result}"
+                        allHealthy = false
                     }
                     
-                    if (!allHealthy) {
-                        echo "❌ Certains services ne répondent pas correctement"
-                        
-                        // Afficher les logs des services problématiques pour diagnostic
-                        bat '''
-                            echo "=== Logs des services ==="
-                            docker-compose logs --tail=20 product.api
-                            docker-compose logs --tail=20 order.api
-                            docker-compose logs --tail=20 recommendation.api
-                            docker-compose logs --tail=20 apigateway
-                        '''
-                        
-                        error("Health check failed")
+                    // Nettoyer le fichier temporaire
+                    bat "del ${tempFile} 2>nul || exit 0"
+                }
+                
+                if (allHealthy) {
+                    echo "✅ Tous les services sont en bonne santé !"
+                    break
+                } else {
+                    if (i < maxRetries - 1) {
+                        echo "Attente de 10 secondes avant nouvelle tentative..."
+                        bat 'ping 127.0.0.1 -n 10 > nul'
                     }
                 }
             }
+            
+            if (!allHealthy) {
+                echo "❌ Certains services ne répondent pas correctement"
+                
+                // Afficher les logs des services problématiques
+                bat '''
+                    echo "=== Logs détaillés des services ==="
+                    
+                    echo "----- API Gateway -----"
+                    docker-compose logs --tail=30 apigateway
+                    
+                    echo "----- Product API -----"
+                    docker-compose logs --tail=30 product.api
+                    
+                    echo "----- Order API -----"
+                    docker-compose logs --tail=30 order.api
+                    
+                    echo "----- Recommendation API -----"
+                    docker-compose logs --tail=30 recommendation.api
+                    
+                    echo "----- Vérification des conteneurs -----"
+                    docker-compose ps
+                    
+                    echo "----- Test direct avec curl verbose -----"
+                    curl -v http://localhost:8000/health
+                    curl -v http://localhost:8001/health
+                '''
+                
+                error("Health check failed - Les services ne répondent pas correctement")
+            }
         }
+    }
+}
         
         stage('Display Webhook Info') {
             when {
