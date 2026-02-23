@@ -186,17 +186,39 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline succeeded! Build ${BUILD_NUMBER}"
+            emailext(
+                subject: "✅ SUCCESS: Pipeline ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: """
+                    <h2>Build Succeeded!</h2>
+                    <p><b>Job:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
+                    <p><b>Branch:</b> ${env.BRANCH_NAME}</p>
+                    <p><b>Duration:</b> ${currentBuild.durationString}</p>
+                    <p><a href="${env.BUILD_URL}">View Build</a></p>
+                """,
+                to: "ezarfi.adil.it@gmail.com",
+                mimeType: 'text/html'
+            )
         }
         failure {
             emailext(
-                subject: "FAILED: Pipeline ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
-                body: "Check console output at ${env.BUILD_URL}",
-                to: "ezarfi.adil.it@gmail.com"
+                subject: "❌ FAILED: Pipeline ${env.JOB_NAME} [${env.BUILD_NUMBER}]",
+                body: """
+                    <h2>Build Failed!</h2>
+                    <p><b>Job:</b> ${env.JOB_NAME}</p>
+                    <p><b>Build:</b> #${env.BUILD_NUMBER}</p>
+                    <p><b>Branch:</b> ${env.BRANCH_NAME}</p>
+                    <p><b>Duration:</b> ${currentBuild.durationString}</p>
+                    <p><a href="${env.BUILD_URL}console">View Console Log</a></p>
+                """,
+                to: "ezarfi.adil.it@gmail.com",
+                mimeType: 'text/html'
             )
         }
-        cleanup {
-            cleanWs()
+        always {
+            node('') {
+                cleanWs()
+            }
         }
     }
 }
