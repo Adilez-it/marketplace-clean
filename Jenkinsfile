@@ -1,46 +1,45 @@
-pipeline {
-    agent any
+// Program.cs ou Startup.cs
+builder.Services.AddHealthChecks()
+    .AddMongoDb(
+        mongodbConnectionString: builder.Configuration.GetConnectionString("MongoDb"),
+        name: "mongodb",
+        timeout: TimeSpan.FromSeconds(3),
+        tags: new[] { "db", "mongodb" })
+    .AddRabbitMQ(
+        rabbitConnectionString: builder.Configuration.GetConnectionString("RabbitMQ"),
+        name: "rabbitmq",
+        timeout: TimeSpan.FromSeconds(3),
+        tags: new[] { "mq", "rabbitmq" });
 
-    stages {
-
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-        stage('Verify Environment') {
-            steps {
-                bat 'dotnet --version'
-                bat 'docker --version'
-            }
-        }
-
-        stage('Restore') {
-            steps {
-                bat 'dotnet restore'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                bat 'dotnet build --configuration Release --no-restore'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                bat 'docker compose build'
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'Build Successful'
-        }
-        failure {
-            echo 'Build Failed'
-        }
-    }
+// Pour Recommendation API uniquement
+if (builder.Environment.EnvironmentName == "Recommendation")
+{
+    builder.Services.AddHealthChecks()
+        .AddNeo4j(
+            neo4jConnectionString: builder.Configuration.GetConnectionString("Neo4j"),
+            name: "neo4j",
+            timeout: TimeSpan.FromSeconds(3),
+            tags: new[] { "db", "neo4j" });
 }
+
+// Endpoint health check
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            Status = report.Status.ToString(),
+            Checks = report.Entries.Select(x => new
+            {
+                Component = x.Key,
+                Status = x.Value.Status.ToString(),
+                Description = x.Value.Description,
+                Duration = x.Value.Duration
+            }),
+            TotalDuration = report.TotalDuration
+        };
+        await context.Response.WriteAsJsonAsync(response);
+    }
+});
