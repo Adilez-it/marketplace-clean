@@ -1803,7 +1803,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\adile\\.nuget\\packages\\": {},
+    "C:\\windows\\system32\\config\\systemprofile\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
@@ -1812,14 +1812,14 @@
       "projectUniqueName": "D:\\marketplace-clean\\Product.API\\Product.API.csproj",
       "projectName": "Product.API",
       "projectPath": "D:\\marketplace-clean\\Product.API\\Product.API.csproj",
-      "packagesPath": "C:\\Users\\adile\\.nuget\\packages\\",
+      "packagesPath": "C:\\windows\\system32\\config\\systemprofile\\.nuget\\packages\\",
       "outputPath": "D:\\marketplace-clean\\Product.API\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\adile\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\windows\\system32\\config\\systemprofile\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],

@@ -10,14 +10,14 @@
         "projectUniqueName": "D:\\marketplace-clean\\Recommendation.API\\Recommendation.API.csproj",
         "projectName": "Recommendation.API",
         "projectPath": "D:\\marketplace-clean\\Recommendation.API\\Recommendation.API.csproj",
-        "packagesPath": "C:\\Users\\adile\\.nuget\\packages\\",
+        "packagesPath": "C:\\windows\\system32\\config\\systemprofile\\.nuget\\packages\\",
         "outputPath": "D:\\marketplace-clean\\Recommendation.API\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\adile\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\windows\\system32\\config\\systemprofile\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
