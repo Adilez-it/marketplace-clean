@@ -124,7 +124,7 @@ pipeline {
                 }
             }
         }
-        
+        // Ajouter une étape de health check robuste
         stage('Health Check') {
     steps {
         script {
