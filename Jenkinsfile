@@ -2,15 +2,13 @@ pipeline {
     agent any
     
     environment {
-        // Définir le port Jenkins (celui que ngrok va exposer)
         JENKINS_PORT = '8080'
-        NGROK_REGION = 'eu' // ou 'us', 'eu', 'ap', etc.
+        NGROK_REGION = 'eu'
     }
     
     stages {
         stage('Checkout') {
             steps {
-                // Pour le développement local, on utilise le répertoire existant
                 dir('D:/marketplace-clean') {
                     echo 'Using local code from D:/marketplace-clean'
                 }
@@ -22,54 +20,40 @@ pipeline {
                 script {
                     echo '🚀 Démarrage du tunnel ngrok pour Jenkins...'
                     
-                    // Tuer les anciens tunnels ngrok
+                    // Tuer les anciens tunnels
                     bat 'ngrok kill || exit 0'
+                    sleep(5)
                     
-                    // Démarrer ngrok pour Jenkins (port 8080)
+                    // Démarrer ngrok
                     bat """
                         start /B cmd /c "ngrok http ${JENKINS_PORT} --region=${NGROK_REGION} --log=stdout > ngrok_jenkins.log 2>&1"
                     """
                     
-                    // Attendre que ngrok démarre
-                    echo 'Attente du démarrage de ngrok...'
                     sleep(10)
                     
-                    // Récupérer l'URL publique de Jenkins
-                    def ngrokData = bat(
+                    // Récupérer l'URL
+                    def ngrokUrl = powershell(
                         script: '''
-                            @echo off
-                            curl -s http://localhost:4040/api/tunnels > ngrok_response.json
-                            type ngrok_response.json
+                            try {
+                                $json = Invoke-RestMethod -Uri "http://localhost:4040/api/tunnels" -ErrorAction Stop
+                                if ($json.tunnels.Count -gt 0) {
+                                    $json.tunnels[0].public_url
+                                } else {
+                                    ""
+                                }
+                            } catch {
+                                ""
+                            }
                         ''',
                         returnStdout: true
                     ).trim()
                     
-                    echo "Réponse ngrok: ${ngrokData}"
-                    
-                    // Parser l'URL publique
-                    def ngrokUrl = ''
-                    if (ngrokData.contains('public_url')) {
-                        // Extraction simple de l'URL
-                        ngrokUrl = bat(
-                            script: '''
-                                @echo off
-                                powershell -Command "$json = Get-Content ngrok_response.json | ConvertFrom-Json; $json.tunnels[0].public_url"
-                            ''',
-                            returnStdout: true
-                        ).trim()
-                    }
-                    
                     if (ngrokUrl) {
                         env.WEBHOOK_URL = ngrokUrl
                         echo "✅ Jenkins Webhook URL: ${env.WEBHOOK_URL}"
-                        
-                        // Sauvegarder l'URL dans un fichier
-                        bat "echo ${env.WEBHOOK_URL} > jenkins_webhook_url.txt"
-                        
-                        // Afficher l'URL pour GitHub webhook
-                        echo "📌 Configurez votre webhook GitHub avec: ${env.WEBHOOK_URL}/github-webhook/"
+                        echo "📌 GitHub Webhook: ${env.WEBHOOK_URL}/github-webhook/"
                     } else {
-                        echo "⚠️ Impossible de récupérer l'URL ngrok. Utilisation de localhost."
+                        echo "⚠️ Impossible de récupérer l'URL ngrok"
                         env.WEBHOOK_URL = "http://localhost:${JENKINS_PORT}"
                     }
                 }
@@ -143,24 +127,70 @@ pipeline {
         
         stage('Health Check') {
             steps {
-                bat '''
-                    echo Waiting for services to start...
-                    timeout /t 20
+                script {
+                    // Remplacer timeout par ping (fonctionne dans Jenkins) [citation:3]
+                    bat 'ping 127.0.0.1 -n 20 > nul'
                     
-                    echo Testing API Gateway...
-                    curl -f http://localhost:8000/health || exit /b 1
+                    // Vérifier chaque service avec un timeout [citation:4]
+                    def services = [
+                        [name: 'API Gateway', url: 'http://localhost:8000/health', port: 8000],
+                        [name: 'Product API', url: 'http://localhost:8001/health', port: 8001],
+                        [name: 'Order API', url: 'http://localhost:8004/health', port: 8004],
+                        [name: 'Recommendation API', url: 'http://localhost:8005/health', port: 8005]
+                    ]
                     
-                    echo Testing Product API...
-                    curl -f http://localhost:8001/health || exit /b 1
+                    // Attendre que tous les services soient prêts (max 2 minutes)
+                    def maxRetries = 12
+                    def allHealthy = false
                     
-                    echo Testing Order API...
-                    curl -f http://localhost:8004/health || exit /b 1
+                    for (int i = 0; i < maxRetries; i++) {
+                        echo "Tentative ${i+1}/${maxRetries} de vérification des services..."
+                        allHealthy = true
+                        
+                        for (service in services) {
+                            // Utiliser curl avec timeout et --retry pour plus de robustesse
+                            def result = bat(
+                                script: "curl -s -o nul -w \"%%{http_code}\" --connect-timeout 5 --max-time 10 ${service.url}",
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (result == '200') {
+                                echo "✅ ${service.name} - OK (HTTP 200)"
+                            } else if (result == '000') {
+                                echo "⚠️ ${service.name} - Pas de réponse (connexion refusée)"
+                                allHealthy = false
+                            } else {
+                                echo "⚠️ ${service.name} - Réponse HTTP ${result}"
+                                allHealthy = false
+                            }
+                        }
+                        
+                        if (allHealthy) {
+                            echo "✅ Tous les services sont en bonne santé !"
+                            break
+                        } else {
+                            if (i < maxRetries - 1) {
+                                echo "Attente de 10 secondes avant nouvelle tentative..."
+                                bat 'ping 127.0.0.1 -n 10 > nul'
+                            }
+                        }
+                    }
                     
-                    echo Testing Recommendation API...
-                    curl -f http://localhost:8005/health || exit /b 1
-                    
-                    echo ✅ All services are healthy!
-                '''
+                    if (!allHealthy) {
+                        echo "❌ Certains services ne répondent pas correctement"
+                        
+                        // Afficher les logs des services problématiques pour diagnostic
+                        bat '''
+                            echo "=== Logs des services ==="
+                            docker-compose logs --tail=20 product.api
+                            docker-compose logs --tail=20 order.api
+                            docker-compose logs --tail=20 recommendation.api
+                            docker-compose logs --tail=20 apigateway
+                        '''
+                        
+                        error("Health check failed")
+                    }
+                }
             }
         }
         
@@ -179,7 +209,6 @@ pipeline {
 
 📡 URL Publique Jenkins    : ${env.WEBHOOK_URL}
 🔗 Webhook GitHub          : ${env.WEBHOOK_URL}/github-webhook/
-🔗 Webhook Générique       : ${env.WEBHOOK_URL}/generic-webhook-trigger/invoke
 
 📊 Interface ngrok         : http://localhost:4040
 
@@ -187,10 +216,6 @@ pipeline {
    1. Allez dans Settings → Webhooks
    2. Ajoutez: ${env.WEBHOOK_URL}/github-webhook/
    3. Content type: application/json
-   4. Events: Just the push event
-
-⏱️  Le tunnel expire dans: 2 heures
-🔄 Pour renouveler: Redémarrez le pipeline
 
 📝 Les URLs de vos services:
    • API Gateway     : http://localhost:8000
@@ -206,41 +231,9 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            
-            // Envoyer l'URL par email (optionnel)
-            // mail to: 'team@example.com',
-            //      subject: "Jenkins Public URL: ${env.WEBHOOK_URL}",
-            //      body: "Votre Jenkins est accessible sur: ${env.WEBHOOK_URL}"
-            
-            // Afficher le résumé
-            script {
-                echo """
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   ✅ PIPELINE EXÉCUTÉ AVEC SUCCÈS                            ║
-║                                                              ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║   📡 Jenkins Public: ${env.WEBHOOK_URL ?: 'Non disponible'}  ║
-║   🚀 API Gateway   : http://localhost:8000                  ║
-║   📊 Portainer     : http://localhost:8888                  ║
-║   🐰 RabbitMQ      : http://localhost:15672                 ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-                """
-            }
         }
         failure {
-            echo '❌ Pipeline failed! Check the logs.'
-            
-            // Tentative de récupération
-            script {
-                try {
-                    bat 'ngrok kill'
-                } catch (err) {
-                    echo 'Ngrok already stopped'
-                }
-            }
+            echo '❌ Pipeline failed! Vérifiez les logs ci-dessus.'
         }
         always {
             script {
