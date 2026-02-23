@@ -70,6 +70,13 @@ pipeline {
             }
         }
 
+        stage('Publish Results') {
+            steps {
+                junit '**/TestResults/*.trx'
+                publishCoverage adapters: [coberturaAdapter('**/coverage.cobertura.xml')]
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -178,12 +185,6 @@ pipeline {
     }
 
     post {
-        always {
-            node {
-                junit '**/TestResults/*.trx'
-                publishCoverage adapters: [coberturaAdapter('**/coverage.cobertura.xml')]
-            }
-        }
         success {
             echo "Pipeline succeeded! Build ${BUILD_NUMBER}"
         }
@@ -193,6 +194,9 @@ pipeline {
                 body: "Check console output at ${env.BUILD_URL}",
                 to: "team@company.com"
             )
+        }
+        cleanup {
+            cleanWs()
         }
     }
 }
