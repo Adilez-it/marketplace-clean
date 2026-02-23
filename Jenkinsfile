@@ -9,11 +9,10 @@ pipeline {
             }
         }
 
-        stage('Debug Environment') {
+        stage('Verify Environment') {
             steps {
-                bat 'echo Running on Windows'
-                bat 'where dotnet'
-                bat 'where docker'
+                bat 'dotnet --version'
+                bat 'docker --version'
             }
         }
 
@@ -33,6 +32,15 @@ pipeline {
             steps {
                 bat 'docker compose build'
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build Successful'
+        }
+        failure {
+            echo 'Build Failed'
         }
     }
 }
