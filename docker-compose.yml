@@ -280,7 +280,6 @@ services:
       - marketplace-network
 
   # ═══════ DEVOPS ═══════
-
   rabbitmq-ui:
     image: rabbitmq:3.12-management-alpine
     profiles: ["devtools"]
