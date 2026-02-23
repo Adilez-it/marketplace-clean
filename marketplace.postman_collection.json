@@ -1,0 +1,154 @@
+{
+  "info": {
+    "name": "Marketplace Microservices",
+    "description": "API collection for all 3 microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "gateway_url", "value": "http://localhost:8000" },
+    { "key": "product_url", "value": "http://localhost:8001" },
+    { "key": "order_url", "value": "http://localhost:8004" },
+    { "key": "rec_url", "value": "http://localhost:8005" }
+  ],
+  "item": [
+    {
+      "name": "Product Service",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": { "method": "GET", "url": "{{product_url}}/api/products" }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "url": "{{product_url}}/api/products",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"iPhone 15 Pro\",\"description\":\"Latest flagship\",\"category\":\"Electronics\",\"price\":999.99,\"stock\":50,\"imageUrl\":\"https://example.com/iphone.jpg\"}"
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": { "method": "GET", "url": "{{product_url}}/api/products/{{productId}}" }
+        },
+        {
+          "name": "Search Products",
+          "request": { "method": "GET", "url": "{{product_url}}/api/products/search?q=iphone" }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "url": "{{product_url}}/api/products/{{productId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"price\":949.99,\"stock\":45}"
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": { "method": "DELETE", "url": "{{product_url}}/api/products/{{productId}}" }
+        },
+        {
+          "name": "Record Product View",
+          "request": {
+            "method": "POST",
+            "url": "{{product_url}}/api/products/{{productId}}/view",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"userId\":\"user123\"}" }
+          }
+        },
+        {
+          "name": "Get Categories",
+          "request": { "method": "GET", "url": "{{product_url}}/api/categories" }
+        }
+      ]
+    },
+    {
+      "name": "Order Service",
+      "item": [
+        {
+          "name": "Get All Orders",
+          "request": { "method": "GET", "url": "{{order_url}}/api/orders" }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "url": "{{order_url}}/api/orders",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"userId\":\"user123\",\"userName\":\"John Doe\",\"items\":[{\"productId\":\"{{productId}}\",\"productName\":\"iPhone 15 Pro\",\"quantity\":1,\"unitPrice\":999.99}],\"shippingAddress\":{\"street\":\"123 Main St\",\"city\":\"New York\",\"state\":\"NY\",\"country\":\"USA\",\"zipCode\":\"10001\",\"phoneNumber\":\"+1234567890\"},\"paymentInfo\":{\"cardName\":\"John Doe\",\"cardNumber\":\"4111111111111111\",\"expiration\":\"12/26\",\"cvv\":\"123\",\"paymentMethod\":0}}"
+            }
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": { "method": "GET", "url": "{{order_url}}/api/orders/{{orderId}}" }
+        },
+        {
+          "name": "Get User Orders",
+          "request": { "method": "GET", "url": "{{order_url}}/api/orders/user/user123" }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PUT",
+            "url": "{{order_url}}/api/orders/{{orderId}}/status",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"newStatus\":2}" }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": { "method": "DELETE", "url": "{{order_url}}/api/orders/{{orderId}}?reason=User+changed+mind" }
+        }
+      ]
+    },
+    {
+      "name": "Recommendation Service",
+      "item": [
+        {
+          "name": "Get Personalized Recommendations",
+          "request": { "method": "GET", "url": "{{rec_url}}/api/recommendations/user123" }
+        },
+        {
+          "name": "Get Similar Products",
+          "request": { "method": "GET", "url": "{{rec_url}}/api/recommendations/similar/{{productId}}" }
+        },
+        {
+          "name": "Get Trending Products",
+          "request": { "method": "GET", "url": "{{rec_url}}/api/recommendations/trending?days=7&limit=10" }
+        },
+        {
+          "name": "Record View",
+          "request": {
+            "method": "POST",
+            "url": "{{rec_url}}/api/recommendations/view",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"userId\":\"user123\",\"productId\":\"{{productId}}\"}" }
+          }
+        },
+        {
+          "name": "Get User History",
+          "request": { "method": "GET", "url": "{{rec_url}}/api/recommendations/history/user123" }
+        }
+      ]
+    },
+    {
+      "name": "Health Checks",
+      "item": [
+        { "name": "Gateway Health", "request": { "method": "GET", "url": "{{gateway_url}}/health" } },
+        { "name": "Product Health", "request": { "method": "GET", "url": "{{product_url}}/health" } },
+        { "name": "Order Health", "request": { "method": "GET", "url": "{{order_url}}/health" } },
+        { "name": "Recommendation Health", "request": { "method": "GET", "url": "{{rec_url}}/health" } }
+      ]
+    }
+  ]
+}

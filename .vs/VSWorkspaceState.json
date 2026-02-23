@@ -1,0 +1,14 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\ApiGateway",
+    "\\Order.API\\API",
+    "\\Order.API\\API\\Controllers",
+    "\\Order.API\\Application",
+    "\\Order.API\\Application\\DTOs",
+    "\\Order.API\\Domain",
+    "\\Order.API\\Domain\\Enums"
+  ],
+  "SelectedNode": "\\ApiGateway\\appsettings.json",
+  "PreviewInSolutionExplorer": false
+}
