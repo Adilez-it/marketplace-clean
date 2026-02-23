@@ -1,55 +1,78 @@
 pipeline {
     agent any
-    
+
+    environment {
+        DOTNET_VERSION = "8.0"
+        COMPOSE_FILE = "docker-compose.yml"
+        DOCKER_BUILDKIT = "1"
+    }
+
+    options {
+        timestamps()
+    }
+
+    triggers {
+        githubPush()
+    }
+
     stages {
+
         stage('Checkout') {
             steps {
-                // Use checkout scm instead of git directly
                 checkout scm
             }
         }
-        
-        stage('Build') {
+
+        stage('Restore Dependencies') {
             steps {
-                script {
-                    // Wrap each directory operation in a node context
-                    dir('Product.API') {
-                        sh 'dotnet build || echo "Build failed for Product.API"'
-                    }
-                    dir('Order.API') {
-                        sh 'dotnet build || echo "Build failed for Order.API"'
-                    }
-                    dir('Recommendation.API') {
-                        sh 'dotnet build || echo "Build failed for Recommendation.API"'
-                    }
-                    dir('ApiGateway') {
-                        sh 'dotnet build || echo "Build failed for ApiGateway"'
-                    }
-                }
+                sh 'dotnet restore'
             }
         }
-        
-        stage('Docker Build') {
+
+        stage('Build Solution') {
             steps {
-                script {
-                    sh 'docker-compose build || echo "Docker build failed"'
-                }
+                sh 'dotnet build --no-restore --configuration Release'
             }
         }
-        
-        stage('Deploy') {
+
+        stage('Run Tests') {
             steps {
-                script {
-                    sh 'docker-compose up -d || echo "Deploy failed"'
-                }
+                sh 'dotnet test --no-build --configuration Release || true'
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                sh 'docker compose build'
+            }
+        }
+
+        stage('Start Services (Optional Staging)') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh 'docker compose down || true'
+                sh 'docker compose up -d'
+            }
+        }
+
+        stage('Cleanup Old Images') {
+            steps {
+                sh 'docker image prune -f'
             }
         }
     }
-    
+
     post {
         always {
-            // Clean up workspace
-            cleanWs()
+            echo 'Pipeline completed.'
+        }
+        success {
+            echo 'Build successful 🚀'
+        }
+        failure {
+            echo 'Build failed ❌'
         }
     }
 }
