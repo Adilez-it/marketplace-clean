@@ -4,8 +4,8 @@ pipeline {
     environment {
         JENKINS_PORT = '8080'
         NGROK_REGION = 'eu'
-        SONAR_HOST_URL = 'http://sonarqube:9000'  // ou http://localhost:9000 si problème de réseau
-        SONAR_TOKEN = credentials('sonarqube-token')  // À créer dans Jenkins
+        SONAR_HOST_URL = 'http://sonarqube:9000'
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
     
     stages {
@@ -22,18 +22,15 @@ pipeline {
                 script {
                     echo '🚀 Démarrage du tunnel ngrok pour Jenkins...'
                     
-                    // Tuer les anciens tunnels
                     bat 'ngrok kill || exit 0'
                     sleep(5)
                     
-                    // Démarrer ngrok
                     bat """
                         start /B cmd /c "ngrok http ${JENKINS_PORT} --region=${NGROK_REGION} --log=stdout > ngrok_jenkins.log 2>&1"
                     """
                     
                     sleep(10)
                     
-                    // Récupérer l'URL
                     def ngrokUrl = powershell(
                         script: '''
                             try {
@@ -187,7 +184,6 @@ pipeline {
         stage('Health Check') {
             steps {
                 script {
-                    // Attendre que les services démarrent
                     bat 'ping 127.0.0.1 -n 30 > nul'
                     
                     def services = [
@@ -224,7 +220,6 @@ pipeline {
         stage('Quality Gate Check') {
             steps {
                 script {
-                    // Attendre que SonarQube termine l'analyse
                     sleep(15)
                     
                     def projects = ['product-api', 'order-api', 'recommendation-api', 'apigateway']
@@ -239,7 +234,6 @@ pipeline {
                         
                         echo "Résultat: ${qualityGate}"
                         
-                        // Optionnel: Vérifier si le status est OK
                         if (qualityGate.contains('"status":"OK"')) {
                             echo "✅ Quality Gate OK pour ${project}"
                         } else {
@@ -284,27 +278,33 @@ pipeline {
     
     post {
         success {
-            echo '✅ Pipeline completed successfully!'
-            
-            // Sauvegarder l'URL pour référence
-            if (env.WEBHOOK_URL) {
-                writeFile file: 'last_webhook_url.txt', text: env.WEBHOOK_URL
+            script {
+                echo '✅ Pipeline completed successfully!'
+                
+                // Sauvegarder l'URL pour référence
+                if (env.WEBHOOK_URL) {
+                    writeFile file: 'last_webhook_url.txt', text: env.WEBHOOK_URL
+                }
             }
         }
         failure {
-            echo '❌ Pipeline failed! Vérifiez les logs ci-dessus.'
-            
-            // Afficher les logs des services en cas d'échec
-            bat '''
-                echo "=== Logs des services en échec ==="
-                docker-compose logs --tail=50 apigateway
-                docker-compose logs --tail=50 product.api
-                docker-compose ps
-            '''
+            script {
+                echo '❌ Pipeline failed! Vérifiez les logs ci-dessus.'
+                
+                // Afficher les logs des services en cas d'échec
+                bat '''
+                    echo "=== Logs des services en échec ==="
+                    docker-compose logs --tail=50 apigateway
+                    docker-compose logs --tail=50 product.api
+                    docker-compose ps
+                '''
+            }
         }
         always {
-            // Archiver les résultats des tests
-            junit '**/TestResults/*.xml'
+            script {
+                // Archiver les résultats des tests
+                junit '**/TestResults/*.xml'
+            }
         }
     }
 }
