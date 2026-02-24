@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        JENKINS_PORT = '8080'
+        JENKINS_PORT = '7070'
         NGROK_REGION = 'eu'
     }
     
