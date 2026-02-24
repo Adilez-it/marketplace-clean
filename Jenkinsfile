@@ -4,6 +4,8 @@ pipeline {
     environment {
         JENKINS_PORT = '7070'
         NGROK_REGION = 'eu'
+        SONAR_HOST_URL = 'http://172.18.0.10:9000'  // IP directe de SonarQube
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
     // Options pour améliorer la lisibilité des logs
     stages {
