@@ -102,6 +102,82 @@ pipeline {
                 }
             }
         }
+        // Étape pour analyser le code avec SonarQube
+        stage('SonarQube Analysis') {
+    parallel {
+        stage('Product API Analysis') {
+            steps {
+                dir('D:/marketplace-clean/Product.API') {
+                    bat """
+                        dotnet sonarscanner begin /k:"product-api" /n:"Product API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN}
+                        dotnet build --configuration Release
+                        dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+        stage('Order API Analysis') {
+            steps {
+                dir('D:/marketplace-clean/Order.API') {
+                    bat """
+                        dotnet sonarscanner begin /k:"order-api" /n:"Order API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN}
+                        dotnet build --configuration Release
+                        dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+        stage('Recommendation API Analysis') {
+            steps {
+                dir('D:/marketplace-clean/Recommendation.API') {
+                    bat """
+                        dotnet sonarscanner begin /k:"recommendation-api" /n:"Recommendation API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN}
+                        dotnet build --configuration Release
+                        dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+        stage('ApiGateway Analysis') {
+            steps {
+                dir('D:/marketplace-clean/ApiGateway') {
+                    bat """
+                        dotnet sonarscanner begin /k:"apigateway" /n:"API Gateway" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN}
+                        dotnet build --configuration Release
+                        dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
+                    """
+                }
+            }
+        }
+    }
+}
+
+stage('Quality Gate Check') {
+    steps {
+        script {
+            sleep(15)
+            
+            def projects = ['product-api', 'order-api', 'recommendation-api', 'apigateway']
+            
+            for (project in projects) {
+                echo "Vérification du Quality Gate pour ${project}..."
+                
+                def qualityGate = bat(
+                    script: "curl -s -u ${SONAR_TOKEN}: \"${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${project}\"",
+                    returnStdout: true
+                ).trim()
+                
+                echo "Résultat: ${qualityGate}"
+                
+                if (qualityGate.contains('"status":"OK"')) {
+                    echo "✅ Quality Gate OK pour ${project}"
+                } else {
+                    echo "⚠️ Quality Gate non vérifié pour ${project}"
+                }
+            }
+        }
+    }
+}
         // Étape pour construire les images Docker et déployer avec docker-compose
         stage('Docker Build') {
             steps {
