@@ -17,7 +17,7 @@ public class RecommendationController : ControllerBase
         _service = service;
         _logger = logger;
     }
-
+// GET api/recommendations/{userId}?limit=10
     [HttpGet("{userId}")]
     public async Task<IActionResult> GetPersonalized(string userId, [FromQuery] int limit = 10)
     {
