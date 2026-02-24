@@ -102,20 +102,6 @@ pipeline {
                 }
             }
         }
-        // Étape pour analyser le code avec SonarQube
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    dir('D:/marketplace-clean') {
-                        bat '''
-                            dotnet sonarscanner begin /k:"marketplace-clean" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.login=%SONAR_TOKEN%
-                            dotnet build --configuration Release
-                            dotnet sonarscanner end /d:sonar.login=%SONAR_TOKEN%
-                        '''
-                    }
-                }
-            }
-        }
         // Étape pour construire les images Docker et déployer avec docker-compose
         stage('Docker Build') {
             steps {
