@@ -1,11 +1,11 @@
 pipeline {
     agent any
-    
+    // Variables d'environnement pour la configuration du tunnel ngrok
     environment {
         JENKINS_PORT = '7070'
         NGROK_REGION = 'eu'
     }
-    
+    // Options pour améliorer la lisibilité des logs
     stages {
         stage('Checkout') {
             steps {
@@ -14,7 +14,7 @@ pipeline {
                 }
             }
         }
-        
+        // Étape pour configurer le tunnel ngrok et récupérer l'URL publique
         stage('Setup Webhook URL') {
             steps {
                 script {
@@ -59,7 +59,7 @@ pipeline {
                 }
             }
         }
-        
+        // Étape pour construire et tester les microservices en parallèle
         stage('Build Microservices') {
             parallel {
                 stage('Product API') {
@@ -100,7 +100,7 @@ pipeline {
                 }
             }
         }
-        
+        // Étape pour construire les images Docker et déployer avec docker-compose
         stage('Docker Build') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -113,7 +113,7 @@ pipeline {
                 }
             }
         }
-        
+        // Étape pour déployer les services avec docker-compose
         stage('Deploy') {
             steps {
                 dir('D:/marketplace-clean') {

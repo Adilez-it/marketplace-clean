@@ -3,6 +3,6 @@
     "",
     "\\ApiGateway"
   ],
-  "SelectedNode": "\\docker-compose.yml",
+  "SelectedNode": "\\ApiGateway\\Program.cs",
   "PreviewInSolutionExplorer": false
 }
