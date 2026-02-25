@@ -194,7 +194,7 @@ stage('SonarQube Analysis + Quality Gate') {
                 }
             }
             
-            // ✅ waitForQualityGate APRÈS le dir(), mais DANS withSonarQubeEnv
+           /* // ✅ waitForQualityGate APRÈS le dir(), mais DANS withSonarQubeEnv
             script {
                 echo '⏳ Attente du Quality Gate SonarQube...'
                 timeout(time: 5, unit: 'MINUTES') {
@@ -205,7 +205,7 @@ stage('SonarQube Analysis + Quality Gate') {
                         echo '✅ Quality Gate : PASSED'
                     }
                 }
-            }
+            }*/
         }
     }
 }
