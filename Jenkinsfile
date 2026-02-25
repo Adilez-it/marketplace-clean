@@ -176,7 +176,7 @@ pipeline {
                                 --no-build ^
                                 /p:CollectCoverage=true ^
                                 /p:CoverletOutputFormat=opencover ^
-                                /p:CoverletOutput=TestResults\Product\coverage.opencover.xml
+                                /p:CoverletOutput=TestResults\Product\coverage.opencover.xml ^
 
                             dotnet test Tests\Order.API.Tests\Order.API.Tests.csproj ^
                                 --configuration Release ^
