@@ -105,18 +105,53 @@ pipeline {
             }
         }
 
-        // ─── 5. SonarQube Analysis ────────────────────────────────────
-        //
-        //  PRE-REQUIS (une seule fois) :
-        //  1) dotnet tool install --global dotnet-sonarscanner
-        //  2) Jenkins > Credentials > Global > Secret text
-        //       ID     : sonar-token-id
-        //       Secret : squ_f2e70195d0c3235c6c65a373d3edd54f5976f648
-        //  3) Jenkins > Configure System > SonarQube servers
-        //       Name : SonarQube Local
-        //       URL  : http://172.18.0.10:9000
-        //       Token: sonar-token-id
-        //
+        // ─── 5. Install SonarScanner ──────────────────────────────────
+        // Installe dotnet-sonarscanner si absent, puis vérifie le PATH
+        stage('Install SonarScanner') {
+            steps {
+                script {
+                    // Tente l'installation — idempotent (ne plante pas si déjà installé)
+                    def installResult = bat(
+                        script: 'dotnet tool install --global dotnet-sonarscanner',
+                        returnStatus: true
+                    )
+                    if (installResult != 0) {
+                        echo '⚠️ Installation échouée ou déjà installé — tentative de mise à jour...'
+                        bat 'dotnet tool update --global dotnet-sonarscanner || echo Already up to date'
+                    } else {
+                        echo '✅ dotnet-sonarscanner installé avec succès'
+                    }
+
+                    // Vérifie que l'outil est accessible dans le PATH
+                    def checkResult = bat(
+                        script: 'dotnet sonarscanner --version',
+                        returnStatus: true
+                    )
+                    if (checkResult != 0) {
+                        echo '🔧 sonarscanner non trouvé dans PATH — ajout manuel...'
+                        // Ajoute %USERPROFILE%\.dotnet\tools au PATH pour cette session
+                        powershell '''
+                            $toolsPath = "$env:USERPROFILE\\.dotnet\\tools"
+                            $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+                            if ($currentPath -notlike "*$toolsPath*") {
+                                [System.Environment]::SetEnvironmentVariable(
+                                    "PATH",
+                                    "$toolsPath;$currentPath",
+                                    "Machine"
+                                )
+                                Write-Host "✅ PATH mis à jour : $toolsPath ajouté"
+                            } else {
+                                Write-Host "✅ PATH déjà configuré"
+                            }
+                        '''
+                    } else {
+                        echo '✅ dotnet-sonarscanner accessible dans le PATH'
+                    }
+                }
+            }
+        }
+
+        // ─── 6. SonarQube Analysis ────────────────────────────────────
         stage('SonarQube Analysis') {
             environment {
                 SONAR_TOKEN = credentials('sonar-token-id')
@@ -124,26 +159,34 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube Local') {
                     dir('D:/marketplace-clean') {
+                        // Utilise le chemin complet vers sonarscanner pour éviter les problèmes de PATH
+                        script {
+                            def scannerPath = powershell(
+                                script: 'Write-Output "$env:USERPROFILE\\.dotnet\\tools\\dotnet-sonarscanner.exe"',
+                                returnStdout: true
+                            ).trim()
+                            echo "🔍 SonarScanner path : ${scannerPath}"
 
-                        // BEGIN - démarre la session d'analyse
-                        bat "dotnet sonarscanner begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
+                            // BEGIN
+                            bat "\"${scannerPath}\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
 
-                        // BUILD - compilation complète interceptée par SonarQube
-                        bat 'dotnet build --configuration Release'
+                            // BUILD
+                            bat 'dotnet build --configuration Release'
 
-                        // TESTS - avec couverture OpenCover
-                        bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                        bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                        bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+                            // TESTS avec couverture OpenCover
+                            bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                            bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                            bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
-                        // END - envoie les résultats au serveur SonarQube
-                        bat "dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%"
+                            // END
+                            bat "\"${scannerPath}\" end /d:sonar.token=%SONAR_TOKEN%"
+                        }
                     }
                 }
             }
         }
 
-        // ─── 6. Quality Gate ──────────────────────────────────────────
+        // ─── 7. Quality Gate ──────────────────────────────────────────
         stage('Quality Gate') {
             steps {
                 script {
@@ -160,7 +203,7 @@ pipeline {
             }
         }
 
-        // ─── 7. Docker Build ──────────────────────────────────────────
+        // ─── 8. Docker Build ──────────────────────────────────────────
         stage('Docker Build') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -172,7 +215,7 @@ pipeline {
             }
         }
 
-        // ─── 8. Deploy ────────────────────────────────────────────────
+        // ─── 9. Deploy ────────────────────────────────────────────────
         stage('Deploy') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -182,7 +225,7 @@ pipeline {
             }
         }
 
-        // ─── 9. Health Check ──────────────────────────────────────────
+        // ─── 10. Health Check ─────────────────────────────────────────
         stage('Health Check') {
             steps {
                 script {
@@ -240,7 +283,7 @@ pipeline {
             }
         }
 
-        // ─── 10. Résumé final ─────────────────────────────────────────
+        // ─── 11. Résumé final ─────────────────────────────────────────
         stage('Display Webhook Info') {
             when { expression { env.WEBHOOK_URL != null } }
             steps {
