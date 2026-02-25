@@ -184,7 +184,7 @@ pipeline {
             }
         }
 
-        // ─── 6. SonarQube Analysis ────────────────────────────────────
+// ─── 6. SonarQube Analysis ────────────────────────────────────
 stage('SonarQube Analysis') {
     environment {
         SONAR_TOKEN = credentials('sonar-token-id')
@@ -221,22 +221,31 @@ stage('SonarQube Analysis') {
                         /d:sonar.sourceEncoding=UTF-8
                 """
 
-                // BUILD - Il faut spécifier un projet ou une solution
-                // Option 1 : S'il y a une solution globale
-                bat 'dotnet build Marketplace.sln --configuration Release'
+                // BUILD - Chaque projet individuellement
+                echo '🏗️ Building Product.API...'
+                bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
                 
-                // Option 2 : Ou builder chaque projet individuellement
-                // bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
-                // bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
-                // bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
-                // bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
+                echo '🏗️ Building Order.API...'
+                bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
+                
+                echo '🏗️ Building Recommendation.API...'
+                bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
+                
+                echo '🏗️ Building ApiGateway...'
+                bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
 
                 // TESTS avec couverture
+                echo '🧪 Running Product.API.Tests...'
                 bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                
+                echo '🧪 Running Order.API.Tests...'
                 bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                
+                echo '🧪 Running Recommendation.API.Tests...'
                 bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
                 // END
+                echo '📤 Sending results to SonarQube...'
                 bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
             }
         }
