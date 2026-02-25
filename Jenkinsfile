@@ -185,43 +185,63 @@ pipeline {
         }
 
         // ─── 6. SonarQube Analysis ────────────────────────────────────
-        stage('SonarQube Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('sonar-token-id')
-            }
-            steps {
-                dir('D:/marketplace-clean') {
-                    script {
-                        def scannerPath = powershell(
-                            script: 'Write-Output "$env:USERPROFILE\\.dotnet\\tools\\dotnet-sonarscanner.exe"',
-                            returnStdout: true
-                        ).trim()
-                        echo "🔍 SonarScanner path : ${scannerPath}"
-
-                        bat """
-                            "${scannerPath}" begin ^
-                                /k:"marketplace" ^
-                                /n:"Marketplace Microservices" ^
-                                /v:"1.0" ^
-                                /d:sonar.host.url=${SONAR_HOST_URL} ^
-                                /d:sonar.token=%SONAR_TOKEN% ^
-                                /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
-                                /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
-                                /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
-                                /d:sonar.sourceEncoding=UTF-8
-                        """
-
-                        bat 'dotnet build --configuration Release'
-
-                        bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                        bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                        bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
-
-                        bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
-                    }
+stage('SonarQube Analysis') {
+    environment {
+        SONAR_TOKEN = credentials('sonar-token-id')
+    }
+    steps {
+        dir('D:/marketplace-clean') {
+            script {
+                // Chemin absolu vers le scanner (fixe pour votre utilisateur)
+                def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
+                
+                // Vérifier que le fichier existe
+                def fileExists = bat(
+                    script: "if exist \"${scannerPath}\" (exit 0) else (exit 1)",
+                    returnStatus: true
+                )
+                
+                if (fileExists != 0) {
+                    error "❌ Scanner introuvable à : ${scannerPath}"
                 }
+                
+                echo "🔍 SonarScanner path : ${scannerPath}"
+
+                // BEGIN
+                bat """
+                    "${scannerPath}" begin ^
+                        /k:"marketplace" ^
+                        /n:"Marketplace Microservices" ^
+                        /v:"1.0" ^
+                        /d:sonar.host.url=${SONAR_HOST_URL} ^
+                        /d:sonar.token=%SONAR_TOKEN% ^
+                        /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
+                        /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
+                        /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
+                        /d:sonar.sourceEncoding=UTF-8
+                """
+
+                // BUILD - Il faut spécifier un projet ou une solution
+                // Option 1 : S'il y a une solution globale
+                bat 'dotnet build Marketplace.sln --configuration Release'
+                
+                // Option 2 : Ou builder chaque projet individuellement
+                // bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
+                // bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
+                // bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
+                // bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
+
+                // TESTS avec couverture
+                bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+
+                // END
+                bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
             }
         }
+    }
+}
 
         // ─── 7. Quality Gate ──────────────────────────────────────────
         stage('Quality Gate') {

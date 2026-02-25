@@ -1,0 +1,14 @@
+{"dotnetenterprise.s4net.serverInfo.product":"SQ_Server"}
+{"dotnetenterprise.s4net.serverInfo.serverUrl":"localhost"}
+{"dotnetenterprise.s4net.serverInfo.version":"9.9.8.100196"}
+{"dotnetenterprise.s4net.jre.bootstrapping":"UnsupportedByServer"}
+{"dotnetenterprise.s4net.scannerEngine.bootstrapping":"Unsupported"}
+{"dotnetenterprise.s4net.scannerCli.download":"Downloaded"}
+{"dotnetenterprise.s4net.params.sonar_cs_opencover_reportspaths.source":"CLI"}
+{"dotnetenterprise.s4net.params.sonar_exclusions.source":"CLI"}
+{"dotnetenterprise.s4net.params.sonar_coverage_exclusions.source":"CLI"}
+{"dotnetenterprise.s4net.params.sonar_sourceencoding.source":"CLI"}
+{"dotnetenterprise.s4net.params.sonar_sourceencoding.value":"UTF-8"}
+{"dotnetenterprise.s4net.params.sonar_scm_disabled.source":"SQ_SERVER_SETTINGS"}
+{"dotnetenterprise.s4net.ci_platform":"Jenkins"}
+{"dotnetenterprise.s4net.begin.runtime":"netcore"}
