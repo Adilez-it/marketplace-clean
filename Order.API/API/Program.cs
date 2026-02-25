@@ -37,7 +37,10 @@ builder.Services.AddHttpClient<IProductServiceClient, ProductServiceClient>(clie
     client.BaseAddress = new Uri(productServiceBaseUrl);
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+        opts.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

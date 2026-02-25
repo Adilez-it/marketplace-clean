@@ -47,3 +47,4 @@ D:\marketplace-clean\Order.API\obj\Debug\net8.0\refint\Order.API.dll
 D:\marketplace-clean\Order.API\obj\Debug\net8.0\Order.API.pdb
 D:\marketplace-clean\Order.API\obj\Debug\net8.0\Order.API.genruntimeconfig.cache
 D:\marketplace-clean\Order.API\obj\Debug\net8.0\ref\Order.API.dll
+D:\marketplace-clean\Order.API\obj\Debug\net8.0\Order.API.sourcelink.json

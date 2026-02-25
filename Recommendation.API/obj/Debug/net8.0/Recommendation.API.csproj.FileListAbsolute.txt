@@ -36,3 +36,4 @@ D:\marketplace-clean\Recommendation.API\obj\Debug\net8.0\refint\Recommendation.A
 D:\marketplace-clean\Recommendation.API\obj\Debug\net8.0\Recommendation.API.pdb
 D:\marketplace-clean\Recommendation.API\obj\Debug\net8.0\Recommendation.API.genruntimeconfig.cache
 D:\marketplace-clean\Recommendation.API\obj\Debug\net8.0\ref\Recommendation.API.dll
+D:\marketplace-clean\Recommendation.API\obj\Debug\net8.0\Recommendation.API.sourcelink.json

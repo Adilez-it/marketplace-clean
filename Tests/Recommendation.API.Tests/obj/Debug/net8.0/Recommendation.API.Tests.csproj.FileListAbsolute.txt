@@ -114,3 +114,4 @@ D:\marketplace-clean\Tests\Recommendation.API.Tests\obj\Debug\net8.0\refint\Reco
 D:\marketplace-clean\Tests\Recommendation.API.Tests\obj\Debug\net8.0\Recommendation.API.Tests.pdb
 D:\marketplace-clean\Tests\Recommendation.API.Tests\obj\Debug\net8.0\Recommendation.API.Tests.genruntimeconfig.cache
 D:\marketplace-clean\Tests\Recommendation.API.Tests\obj\Debug\net8.0\ref\Recommendation.API.Tests.dll
+D:\marketplace-clean\Tests\Recommendation.API.Tests\obj\Debug\net8.0\Recommendation.API.Tests.sourcelink.json

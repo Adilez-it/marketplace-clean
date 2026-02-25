@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\ApiGateway"
+    "\\Order.API\\API",
+    "\\Order.API\\API\\Controllers"
   ],
-  "SelectedNode": "\\ApiGateway\\Program.cs",
+  "SelectedNode": "\\docker-compose.yml",
   "PreviewInSolutionExplorer": false
 }

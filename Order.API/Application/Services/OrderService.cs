@@ -43,6 +43,7 @@ public class OrderService : IOrderService
         return orders.Select(MapToDto).ToList();
     }
 
+    // This method checks stock for each item, creates the order, decrements stock, updates status, and publishes events.
     public async Task<OrderDto> CreateOrderAsync(CreateOrderDto dto)
     {
         foreach (var item in dto.Items)
@@ -150,12 +151,14 @@ public class OrderService : IOrderService
         return result;
     }
 
+    // This method masks the card number except for the last 4 digits for security reasons.
     private static string MaskCardNumber(string cardNumber)
     {
         if (cardNumber.Length < 4) return cardNumber;
         return "****" + cardNumber[^4..];
     }
 
+    // This method maps a CustomerOrder domain entity to an OrderDto for API responses.
     private static OrderDto MapToDto(CustomerOrder order) => new()
     {
         Id = order.Id,
@@ -186,6 +189,7 @@ public class OrderService : IOrderService
     };
 }
 
+// This interface defines the contract for the OrderService, including methods for retrieving, creating, updating, and cancelling orders.
 public interface IOrderService
 {
     Task<List<OrderDto>> GetOrdersAsync();

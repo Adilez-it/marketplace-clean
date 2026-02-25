@@ -125,3 +125,4 @@ D:\marketplace-clean\Tests\Product.API.Tests\obj\Debug\net8.0\refint\Product.API
 D:\marketplace-clean\Tests\Product.API.Tests\obj\Debug\net8.0\Product.API.Tests.pdb
 D:\marketplace-clean\Tests\Product.API.Tests\obj\Debug\net8.0\Product.API.Tests.genruntimeconfig.cache
 D:\marketplace-clean\Tests\Product.API.Tests\obj\Debug\net8.0\ref\Product.API.Tests.dll
+D:\marketplace-clean\Tests\Product.API.Tests\obj\Debug\net8.0\Product.API.Tests.sourcelink.json

@@ -47,3 +47,4 @@ D:\marketplace-clean\Product.API\obj\Debug\net8.0\refint\Product.API.dll
 D:\marketplace-clean\Product.API\obj\Debug\net8.0\Product.API.pdb
 D:\marketplace-clean\Product.API\obj\Debug\net8.0\Product.API.genruntimeconfig.cache
 D:\marketplace-clean\Product.API\obj\Debug\net8.0\ref\Product.API.dll
+D:\marketplace-clean\Product.API\obj\Debug\net8.0\Product.API.sourcelink.json
