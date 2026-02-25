@@ -1,11 +1,11 @@
 pipeline {
     agent any
-    // Variables d'environnement pour la configuration du tunnel ngrok
+    
     environment {
         JENKINS_PORT = '7070'
         NGROK_REGION = 'eu'
         SONAR_HOST_URL = 'http://172.18.0.10:9000'
-        SONAR_TOKEN = credentials('sonarqube-token')  // Utilisation du credential Jenkins
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
     
     stages {
@@ -100,71 +100,55 @@ pipeline {
             }
         }
         
-        // ⭐ NOUVEAU : Stage SonarQube Analysis adapté pour .NET ⭐
         stage('SonarQube Analysis') {
             parallel {
                 stage('Product API Analysis') {
-                    environment {
-                        SONAR_TOKEN = credentials('sonarqube-token')
-                    }
                     steps {
                         dir('D:/marketplace-clean/Product.API') {
                             withSonarQubeEnv('sonarqube-local') {
                                 bat """
-                                    dotnet sonarscanner begin /k:"product-api" /n:"Product API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=%SONAR_TOKEN% /d:sonar.coverageReportPaths=TestResults
+                                    dotnet sonarscanner begin /k:"product-api" /n:"Product API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
                                     dotnet build --configuration Release
-                                    dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
                                 """
                             }
                         }
                     }
                 }
-                
                 stage('Order API Analysis') {
-                    environment {
-                        SONAR_TOKEN = credentials('sonarqube-token')
-                    }
                     steps {
                         dir('D:/marketplace-clean/Order.API') {
                             withSonarQubeEnv('sonarqube-local') {
                                 bat """
-                                    dotnet sonarscanner begin /k:"order-api" /n:"Order API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=%SONAR_TOKEN% /d:sonar.coverageReportPaths=TestResults
+                                    dotnet sonarscanner begin /k:"order-api" /n:"Order API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
                                     dotnet build --configuration Release
-                                    dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
                                 """
                             }
                         }
                     }
                 }
-                
                 stage('Recommendation API Analysis') {
-                    environment {
-                        SONAR_TOKEN = credentials('sonarqube-token')
-                    }
                     steps {
                         dir('D:/marketplace-clean/Recommendation.API') {
                             withSonarQubeEnv('sonarqube-local') {
                                 bat """
-                                    dotnet sonarscanner begin /k:"recommendation-api" /n:"Recommendation API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=%SONAR_TOKEN% /d:sonar.coverageReportPaths=TestResults
+                                    dotnet sonarscanner begin /k:"recommendation-api" /n:"Recommendation API" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
                                     dotnet build --configuration Release
-                                    dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
                                 """
                             }
                         }
                     }
                 }
-                
                 stage('ApiGateway Analysis') {
-                    environment {
-                        SONAR_TOKEN = credentials('sonarqube-token')
-                    }
                     steps {
                         dir('D:/marketplace-clean/ApiGateway') {
                             withSonarQubeEnv('sonarqube-local') {
                                 bat """
-                                    dotnet sonarscanner begin /k:"apigateway" /n:"API Gateway" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=%SONAR_TOKEN% /d:sonar.coverageReportPaths=TestResults
+                                    dotnet sonarscanner begin /k:"apigateway" /n:"API Gateway" /v:"1.0" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=${SONAR_TOKEN} /d:sonar.coverageReportPaths=TestResults
                                     dotnet build --configuration Release
-                                    dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%
+                                    dotnet sonarscanner end /d:sonar.token=${SONAR_TOKEN}
                                 """
                             }
                         }
@@ -173,7 +157,6 @@ pipeline {
             }
         }
         
-        // ⭐ NOUVEAU : Stage Quality Gate Check ⭐
         stage('Quality Gate Check') {
             steps {
                 script {
@@ -181,22 +164,20 @@ pipeline {
                     
                     def projects = ['product-api', 'order-api', 'recommendation-api', 'apigateway']
                     
-                    withSonarQubeEnv('sonarqube-local') {
-                        for (project in projects) {
-                            echo "Vérification du Quality Gate pour ${project}..."
-                            
-                            def qualityGate = bat(
-                                script: "curl -s -u ${SONAR_TOKEN}: \"${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${project}\"",
-                                returnStdout: true
-                            ).trim()
-                            
-                            echo "Résultat: ${qualityGate}"
-                            
-                            if (qualityGate.contains('"status":"OK"')) {
-                                echo "✅ Quality Gate OK pour ${project}"
-                            } else {
-                                echo "⚠️ Quality Gate non vérifié pour ${project}"
-                            }
+                    for (project in projects) {
+                        echo "Vérification du Quality Gate pour ${project}..."
+                        
+                        def qualityGate = bat(
+                            script: "curl -s -u ${SONAR_TOKEN}: \"${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${project}\"",
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "Résultat: ${qualityGate}"
+                        
+                        if (qualityGate.contains('"status":"OK"')) {
+                            echo "✅ Quality Gate OK pour ${project}"
+                        } else {
+                            echo "⚠️ Quality Gate non vérifié pour ${project}"
                         }
                     }
                 }
@@ -308,7 +289,8 @@ pipeline {
         }
         always {
             script {
-                junit '**/TestResults/*.xml'
+                // Archiver les résultats des tests JUnit
+                junit allowEmptyResults: true, testResults: '**/TestResults/*.xml'
             }
         }
     }
