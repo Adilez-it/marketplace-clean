@@ -190,82 +190,87 @@ stage('SonarQube Analysis') {
         SONAR_TOKEN = credentials('sonar-token-id')
     }
     steps {
-        dir('D:/marketplace-clean') {
-            script {
-                // Chemin absolu vers le scanner (fixe pour votre utilisateur)
-                def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
-                
-                // Vérifier que le fichier existe
-                def fileExists = bat(
-                    script: "if exist \"${scannerPath}\" (exit 0) else (exit 1)",
-                    returnStatus: true
-                )
-                
-                if (fileExists != 0) {
-                    error "❌ Scanner introuvable à : ${scannerPath}"
+        withSonarQubeEnv('SonarQube Local') {
+            dir('D:/marketplace-clean') {
+                script {
+                    // Chemin absolu vers le scanner
+                    def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
+                    
+                    // Vérifier que le fichier existe
+                    def fileExists = bat(
+                        script: "if exist \"${scannerPath}\" (exit 0) else (exit 1)",
+                        returnStatus: true
+                    )
+                    
+                    if (fileExists != 0) {
+                        error "❌ Scanner introuvable à : ${scannerPath}"
+                    }
+                    
+                    echo "🔍 SonarScanner path : ${scannerPath}"
+
+                    // BEGIN
+                    bat """
+                        "${scannerPath}" begin ^
+                            /k:"marketplace" ^
+                            /n:"Marketplace Microservices" ^
+                            /v:"1.0" ^
+                            /d:sonar.host.url=${SONAR_HOST_URL} ^
+                            /d:sonar.token=%SONAR_TOKEN% ^
+                            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
+                            /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
+                            /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
+                            /d:sonar.sourceEncoding=UTF-8
+                    """
+
+                    // BUILD - Chaque projet individuellement
+                    echo '🏗️ Building Product.API...'
+                    bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
+                    
+                    echo '🏗️ Building Order.API...'
+                    bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
+                    
+                    echo '🏗️ Building Recommendation.API...'
+                    bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
+                    
+                    echo '🏗️ Building ApiGateway...'
+                    bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
+
+                    // TESTS avec couverture
+                    echo '🧪 Running Product.API.Tests...'
+                    bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                    
+                    echo '🧪 Running Order.API.Tests...'
+                    bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                    
+                    echo '🧪 Running Recommendation.API.Tests...'
+                    bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+
+                    // END
+                    echo '📤 Sending results to SonarQube...'
+                    bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
                 }
-                
-                echo "🔍 SonarScanner path : ${scannerPath}"
-
-                // BEGIN
-                bat """
-                    "${scannerPath}" begin ^
-                        /k:"marketplace" ^
-                        /n:"Marketplace Microservices" ^
-                        /v:"1.0" ^
-                        /d:sonar.host.url=${SONAR_HOST_URL} ^
-                        /d:sonar.token=%SONAR_TOKEN% ^
-                        /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
-                        /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
-                        /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
-                        /d:sonar.sourceEncoding=UTF-8
-                """
-
-                // BUILD - Chaque projet individuellement
-                echo '🏗️ Building Product.API...'
-                bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
-                
-                echo '🏗️ Building Order.API...'
-                bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
-                
-                echo '🏗️ Building Recommendation.API...'
-                bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
-                
-                echo '🏗️ Building ApiGateway...'
-                bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
-
-                // TESTS avec couverture
-                echo '🧪 Running Product.API.Tests...'
-                bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                
-                echo '🧪 Running Order.API.Tests...'
-                bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                
-                echo '🧪 Running Recommendation.API.Tests...'
-                bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
-
-                // END
-                echo '📤 Sending results to SonarQube...'
-                bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
             }
         }
     }
 }
 
-        // ─── 7. Quality Gate ──────────────────────────────────────────
-        stage('Quality Gate') {
-            steps {
-                script {
-                    echo '⏳ Attente Quality Gate SonarQube...'
-                    def qg = waitForQualityGate abortPipeline: false
-                    if (qg.status != 'OK') {
-                        echo "⚠️ Quality Gate : ${qg.status} — voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                    } else {
-                        echo '✅ Quality Gate : PASSED'
-                    }
-                }
+// ─── 7. Quality Gate ──────────────────────────────────────────
+stage('Quality Gate') {
+    steps {
+        script {
+            echo '⏳ Attente Quality Gate SonarQube...'
+            // Attendre le résultat de l'analyse SonarQube
+            def qg = waitForQualityGate abortPipeline: false
+            if (qg.status != 'OK') {
+                echo "⚠️ Quality Gate : ${qg.status} — voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                // Décommenter pour bloquer le pipeline si nécessaire
+                // error("Quality Gate FAILED: ${qg.status}")
+            } else {
+                echo '✅ Quality Gate : PASSED'
             }
         }
+    }
+}
 
         // ─── 8. Docker Build ──────────────────────────────────────────
         stage('Docker Build') {
