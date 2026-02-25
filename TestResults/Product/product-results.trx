@@ -1,62 +1,62 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TestRun id="487030a3-e890-43f6-a567-b5f13779c572" name="DELL-DIDI$@DELL-DIDI 2026-02-25 18:23:45" runUser="NT AUTHORITY\SYSTEM" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-  <Times creation="2026-02-25T18:23:45.4576824+00:00" queuing="2026-02-25T18:23:45.4576829+00:00" start="2026-02-25T18:23:39.5800334+00:00" finish="2026-02-25T18:23:45.4668068+00:00" />
-  <TestSettings name="default" id="133031b8-6a69-40d9-83d5-ed23dd3bff4a">
-    <Deployment runDeploymentRoot="DELL-DIDI$_DELL-DIDI_2026-02-25_18_23_45" />
+<TestRun id="97429a43-532b-481b-9063-34f21bf174bd" name="DELL-DIDI$@DELL-DIDI 2026-02-25 18:42:07" runUser="NT AUTHORITY\SYSTEM" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-02-25T18:42:07.1013605+00:00" queuing="2026-02-25T18:42:07.1013613+00:00" start="2026-02-25T18:42:05.4474172+00:00" finish="2026-02-25T18:42:07.1092413+00:00" />
+  <TestSettings name="default" id="df398274-eab7-43ea-ac07-a3c7543aede8">
+    <Deployment runDeploymentRoot="DELL-DIDI$_DELL-DIDI_2026-02-25_18_42_07" />
   </TestSettings>
   <Results>
-    <UnitTestResult executionId="4ec25901-ae64-4047-b71f-ff9767b6b658" testId="9030240c-dfb3-d774-5685-bda1c19d8399" testName="Product.API.Tests.Unit.ProductServiceTests.DeleteProductAsync_ShouldCallRepository" computerName="DELL-DIDI" duration="00:00:00.0069794" startTime="2026-02-25T18:23:45.3073813+00:00" endTime="2026-02-25T18:23:45.3073817+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4ec25901-ae64-4047-b71f-ff9767b6b658" />
-    <UnitTestResult executionId="329bee7f-68b6-45b4-bf2c-4f182e790a85" testId="0346c5f2-75ab-e298-fc8f-1906e61ba226" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnNull_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.6137171" startTime="2026-02-25T18:23:45.1352168+00:00" endTime="2026-02-25T18:23:45.1352444+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="329bee7f-68b6-45b4-bf2c-4f182e790a85" />
-    <UnitTestResult executionId="58049849-d531-44d7-b92c-5c62a2fc3a6a" testId="956e4d34-71fa-dd70-4918-f593b763648d" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnProduct_WhenFound" computerName="DELL-DIDI" duration="00:00:00.0008835" startTime="2026-02-25T18:23:45.3201906+00:00" endTime="2026-02-25T18:23:45.3201908+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="58049849-d531-44d7-b92c-5c62a2fc3a6a" />
-    <UnitTestResult executionId="706220ab-4e60-4d8a-8940-776f7dabdb39" testId="3fe9a809-3bbc-6afb-970c-0e4cef07e4b1" testName="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldThrow_WhenInsufficientStock" computerName="DELL-DIDI" duration="00:00:00.1559508" startTime="2026-02-25T18:23:45.2907746+00:00" endTime="2026-02-25T18:23:45.2907751+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="706220ab-4e60-4d8a-8940-776f7dabdb39" />
-    <UnitTestResult executionId="5e3532fe-57eb-44c1-9f14-0e94f6ff07ba" testId="b8cdc521-ec1c-9c79-1486-101045310717" testName="Product.API.Tests.Unit.ProductServiceTests.UpdateProductAsync_ShouldReturnFalse_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.0031183" startTime="2026-02-25T18:23:45.3234469+00:00" endTime="2026-02-25T18:23:45.3234473+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5e3532fe-57eb-44c1-9f14-0e94f6ff07ba" />
-    <UnitTestResult executionId="18bb241c-05c6-4576-ba2e-be175e02024c" testId="80c00255-526c-3196-d827-8e58d8cc7bb2" testName="Product.API.Tests.Unit.ProductServiceTests.CreateProductAsync_ShouldReturnProduct_WhenValidDto" computerName="DELL-DIDI" duration="00:00:00.0117531" startTime="2026-02-25T18:23:45.3192240+00:00" endTime="2026-02-25T18:23:45.3192245+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="18bb241c-05c6-4576-ba2e-be175e02024c" />
-    <UnitTestResult executionId="378deb3b-76d5-423d-b6f0-2e6fcfdb1de9" testId="3b02a392-1aee-f4ef-3082-4f3578482c79" testName="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldReturnFalse_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.0012717" startTime="2026-02-25T18:23:45.3248685+00:00" endTime="2026-02-25T18:23:45.3248690+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="378deb3b-76d5-423d-b6f0-2e6fcfdb1de9" />
-    <UnitTestResult executionId="13807c8a-3469-4532-b52e-9e813a523fa2" testId="be50ddda-5589-1385-f934-7141f5dc88ce" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductsAsync_ShouldReturnAllProducts" computerName="DELL-DIDI" duration="00:00:00.0091755" startTime="2026-02-25T18:23:45.3001431+00:00" endTime="2026-02-25T18:23:45.3001435+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="13807c8a-3469-4532-b52e-9e813a523fa2" />
+    <UnitTestResult executionId="66e37728-dd1a-44fa-a857-579e9b0c42ad" testId="80c00255-526c-3196-d827-8e58d8cc7bb2" testName="Product.API.Tests.Unit.ProductServiceTests.CreateProductAsync_ShouldReturnProduct_WhenValidDto" computerName="DELL-DIDI" duration="00:00:00.0117528" startTime="2026-02-25T18:42:06.8922865+00:00" endTime="2026-02-25T18:42:06.8922871+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66e37728-dd1a-44fa-a857-579e9b0c42ad" />
+    <UnitTestResult executionId="9ec7f122-3014-48c3-8c94-068bde24330d" testId="b8cdc521-ec1c-9c79-1486-101045310717" testName="Product.API.Tests.Unit.ProductServiceTests.UpdateProductAsync_ShouldReturnFalse_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.0024403" startTime="2026-02-25T18:42:06.8959601+00:00" endTime="2026-02-25T18:42:06.8959607+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="9ec7f122-3014-48c3-8c94-068bde24330d" />
+    <UnitTestResult executionId="cf130294-8afe-4897-bd7d-3bd3db8c2349" testId="3fe9a809-3bbc-6afb-970c-0e4cef07e4b1" testName="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldThrow_WhenInsufficientStock" computerName="DELL-DIDI" duration="00:00:00.0118494" startTime="2026-02-25T18:42:06.8613296+00:00" endTime="2026-02-25T18:42:06.8613298+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cf130294-8afe-4897-bd7d-3bd3db8c2349" />
+    <UnitTestResult executionId="8ba1975e-b9fd-4117-aa91-2e7e54526115" testId="0346c5f2-75ab-e298-fc8f-1906e61ba226" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnNull_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.1196270" startTime="2026-02-25T18:42:06.8423878+00:00" endTime="2026-02-25T18:42:06.8424288+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8ba1975e-b9fd-4117-aa91-2e7e54526115" />
+    <UnitTestResult executionId="7057ef58-8b3b-47f5-ba02-4325a9fcafdd" testId="be50ddda-5589-1385-f934-7141f5dc88ce" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductsAsync_ShouldReturnAllProducts" computerName="DELL-DIDI" duration="00:00:00.0104509" startTime="2026-02-25T18:42:06.8638692+00:00" endTime="2026-02-25T18:42:06.8638697+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7057ef58-8b3b-47f5-ba02-4325a9fcafdd" />
+    <UnitTestResult executionId="0ea28686-a8b2-40ad-a3c9-887ddb818c52" testId="9030240c-dfb3-d774-5685-bda1c19d8399" testName="Product.API.Tests.Unit.ProductServiceTests.DeleteProductAsync_ShouldCallRepository" computerName="DELL-DIDI" duration="00:00:00.0163307" startTime="2026-02-25T18:42:06.8803986+00:00" endTime="2026-02-25T18:42:06.8803990+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0ea28686-a8b2-40ad-a3c9-887ddb818c52" />
+    <UnitTestResult executionId="5f381c5e-02f3-4b37-becd-b1b0a8bf9a0d" testId="3b02a392-1aee-f4ef-3082-4f3578482c79" testName="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldReturnFalse_WhenProductNotFound" computerName="DELL-DIDI" duration="00:00:00.0010610" startTime="2026-02-25T18:42:06.8973853+00:00" endTime="2026-02-25T18:42:06.8973858+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5f381c5e-02f3-4b37-becd-b1b0a8bf9a0d" />
+    <UnitTestResult executionId="beb0d062-2634-446b-a8e2-284367a2e2c2" testId="956e4d34-71fa-dd70-4918-f593b763648d" testName="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnProduct_WhenFound" computerName="DELL-DIDI" duration="00:00:00.0010179" startTime="2026-02-25T18:42:06.8933911+00:00" endTime="2026-02-25T18:42:06.8933913+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="beb0d062-2634-446b-a8e2-284367a2e2c2" />
   </Results>
   <TestDefinitions>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldReturnFalse_WhenProductNotFound" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="3b02a392-1aee-f4ef-3082-4f3578482c79">
-      <Execution id="378deb3b-76d5-423d-b6f0-2e6fcfdb1de9" />
+      <Execution id="5f381c5e-02f3-4b37-becd-b1b0a8bf9a0d" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="DecrementStockAsync_ShouldReturnFalse_WhenProductNotFound" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.UpdateProductAsync_ShouldReturnFalse_WhenProductNotFound" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="b8cdc521-ec1c-9c79-1486-101045310717">
-      <Execution id="5e3532fe-57eb-44c1-9f14-0e94f6ff07ba" />
+      <Execution id="9ec7f122-3014-48c3-8c94-068bde24330d" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="UpdateProductAsync_ShouldReturnFalse_WhenProductNotFound" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnProduct_WhenFound" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="956e4d34-71fa-dd70-4918-f593b763648d">
-      <Execution id="58049849-d531-44d7-b92c-5c62a2fc3a6a" />
+      <Execution id="beb0d062-2634-446b-a8e2-284367a2e2c2" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="GetProductByIdAsync_ShouldReturnProduct_WhenFound" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.CreateProductAsync_ShouldReturnProduct_WhenValidDto" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="80c00255-526c-3196-d827-8e58d8cc7bb2">
-      <Execution id="18bb241c-05c6-4576-ba2e-be175e02024c" />
+      <Execution id="66e37728-dd1a-44fa-a857-579e9b0c42ad" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="CreateProductAsync_ShouldReturnProduct_WhenValidDto" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.GetProductByIdAsync_ShouldReturnNull_WhenProductNotFound" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="0346c5f2-75ab-e298-fc8f-1906e61ba226">
-      <Execution id="329bee7f-68b6-45b4-bf2c-4f182e790a85" />
+      <Execution id="8ba1975e-b9fd-4117-aa91-2e7e54526115" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="GetProductByIdAsync_ShouldReturnNull_WhenProductNotFound" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.DeleteProductAsync_ShouldCallRepository" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="9030240c-dfb3-d774-5685-bda1c19d8399">
-      <Execution id="4ec25901-ae64-4047-b71f-ff9767b6b658" />
+      <Execution id="0ea28686-a8b2-40ad-a3c9-887ddb818c52" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="DeleteProductAsync_ShouldCallRepository" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.GetProductsAsync_ShouldReturnAllProducts" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="be50ddda-5589-1385-f934-7141f5dc88ce">
-      <Execution id="13807c8a-3469-4532-b52e-9e813a523fa2" />
+      <Execution id="7057ef58-8b3b-47f5-ba02-4325a9fcafdd" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="GetProductsAsync_ShouldReturnAllProducts" />
     </UnitTest>
     <UnitTest name="Product.API.Tests.Unit.ProductServiceTests.DecrementStockAsync_ShouldThrow_WhenInsufficientStock" storage="d:\marketplace-clean\tests\product.api.tests\bin\release\net8.0\product.api.tests.dll" id="3fe9a809-3bbc-6afb-970c-0e4cef07e4b1">
-      <Execution id="706220ab-4e60-4d8a-8940-776f7dabdb39" />
+      <Execution id="cf130294-8afe-4897-bd7d-3bd3db8c2349" />
       <TestMethod codeBase="D:\marketplace-clean\Tests\Product.API.Tests\bin\Release\net8.0\Product.API.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="Product.API.Tests.Unit.ProductServiceTests" name="DecrementStockAsync_ShouldThrow_WhenInsufficientStock" />
     </UnitTest>
   </TestDefinitions>
   <TestEntries>
-    <TestEntry testId="9030240c-dfb3-d774-5685-bda1c19d8399" executionId="4ec25901-ae64-4047-b71f-ff9767b6b658" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="0346c5f2-75ab-e298-fc8f-1906e61ba226" executionId="329bee7f-68b6-45b4-bf2c-4f182e790a85" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="956e4d34-71fa-dd70-4918-f593b763648d" executionId="58049849-d531-44d7-b92c-5c62a2fc3a6a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="3fe9a809-3bbc-6afb-970c-0e4cef07e4b1" executionId="706220ab-4e60-4d8a-8940-776f7dabdb39" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="b8cdc521-ec1c-9c79-1486-101045310717" executionId="5e3532fe-57eb-44c1-9f14-0e94f6ff07ba" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="80c00255-526c-3196-d827-8e58d8cc7bb2" executionId="18bb241c-05c6-4576-ba2e-be175e02024c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="3b02a392-1aee-f4ef-3082-4f3578482c79" executionId="378deb3b-76d5-423d-b6f0-2e6fcfdb1de9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
-    <TestEntry testId="be50ddda-5589-1385-f934-7141f5dc88ce" executionId="13807c8a-3469-4532-b52e-9e813a523fa2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="80c00255-526c-3196-d827-8e58d8cc7bb2" executionId="66e37728-dd1a-44fa-a857-579e9b0c42ad" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b8cdc521-ec1c-9c79-1486-101045310717" executionId="9ec7f122-3014-48c3-8c94-068bde24330d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3fe9a809-3bbc-6afb-970c-0e4cef07e4b1" executionId="cf130294-8afe-4897-bd7d-3bd3db8c2349" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="0346c5f2-75ab-e298-fc8f-1906e61ba226" executionId="8ba1975e-b9fd-4117-aa91-2e7e54526115" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be50ddda-5589-1385-f934-7141f5dc88ce" executionId="7057ef58-8b3b-47f5-ba02-4325a9fcafdd" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9030240c-dfb3-d774-5685-bda1c19d8399" executionId="0ea28686-a8b2-40ad-a3c9-887ddb818c52" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3b02a392-1aee-f4ef-3082-4f3578482c79" executionId="5f381c5e-02f3-4b37-becd-b1b0a8bf9a0d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="956e4d34-71fa-dd70-4918-f593b763648d" executionId="beb0d062-2634-446b-a8e2-284367a2e2c2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
   </TestEntries>
   <TestLists>
     <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
@@ -66,17 +66,17 @@
     <Counters total="8" executed="8" passed="8" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
     <Output>
       <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.23)&#xD;
-[xUnit.net 00:00:00.77]   Discovering: Product.API.Tests&#xD;
-[xUnit.net 00:00:00.81]   Discovered:  Product.API.Tests&#xD;
-[xUnit.net 00:00:00.81]   Starting:    Product.API.Tests&#xD;
-[xUnit.net 00:00:01.67]   Finished:    Product.API.Tests&#xD;
+[xUnit.net 00:00:00.25]   Discovering: Product.API.Tests&#xD;
+[xUnit.net 00:00:00.31]   Discovered:  Product.API.Tests&#xD;
+[xUnit.net 00:00:00.31]   Starting:    Product.API.Tests&#xD;
+[xUnit.net 00:00:00.57]   Finished:    Product.API.Tests&#xD;
 </StdOut>
     </Output>
     <RunInfos>
-      <RunInfo computerName="DELL-DIDI" outcome="Warning" timestamp="2026-02-25T18:23:42.9823953+00:00">
+      <RunInfo computerName="DELL-DIDI" outcome="Warning" timestamp="2026-02-25T18:42:06.1541343+00:00">
         <Text>Data collection : Unable to find a datacollector with friendly name 'XPlat Code Coverage'.</Text>
       </RunInfo>
-      <RunInfo computerName="DELL-DIDI" outcome="Warning" timestamp="2026-02-25T18:23:42.9830434+00:00">
+      <RunInfo computerName="DELL-DIDI" outcome="Warning" timestamp="2026-02-25T18:42:06.1545644+00:00">
         <Text>Data collection : Could not find data collector 'XPlat Code Coverage'</Text>
       </RunInfo>
     </RunInfos>

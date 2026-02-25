@@ -4,7 +4,7 @@ pipeline {
     environment {
         JENKINS_PORT   = '7070'
         NGROK_REGION   = 'eu'
-        SONAR_HOST_URL = 'http://172.18.0.10:9000'
+        SONAR_HOST_URL = 'http://localhost:9000'  // Changé de 172.18.0.10 à localhost
     }
 
     stages {
@@ -106,11 +106,9 @@ pipeline {
         }
 
         // ─── 5. Install SonarScanner ──────────────────────────────────
-        // Installe dotnet-sonarscanner si absent, puis vérifie le PATH
         stage('Install SonarScanner') {
             steps {
                 script {
-                    // Tente l'installation — idempotent (ne plante pas si déjà installé)
                     def installResult = bat(
                         script: 'dotnet tool install --global dotnet-sonarscanner',
                         returnStatus: true
@@ -122,14 +120,12 @@ pipeline {
                         echo '✅ dotnet-sonarscanner installé avec succès'
                     }
 
-                    // Vérifie que l'outil est accessible dans le PATH
                     def checkResult = bat(
                         script: 'dotnet sonarscanner --version',
                         returnStatus: true
                     )
                     if (checkResult != 0) {
                         echo '🔧 sonarscanner non trouvé dans PATH — ajout manuel...'
-                        // Ajoute %USERPROFILE%\.dotnet\tools au PATH pour cette session
                         powershell '''
                             $toolsPath = "$env:USERPROFILE\\.dotnet\\tools"
                             $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
@@ -151,6 +147,39 @@ pipeline {
             }
         }
 
+        // ─── 5.5 Start SonarQube ─────────────────────────────────────
+        stage('Start SonarQube') {
+            steps {
+                dir('D:/marketplace-clean') {
+                    bat 'docker-compose up -d sonarqube'
+                    echo '⏳ Attente que SonarQube soit prêt (30 secondes)...'
+                    bat 'timeout /t 30'
+                    
+                    // Vérification supplémentaire que SonarQube répond
+                    script {
+                        def sonarReady = false
+                        for (int i = 0; i < 6; i++) {
+                            def status = bat(
+                                script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
+                                returnStdout: true
+                            ).trim()
+                            if (status == '200' || status == '302') {
+                                sonarReady = true
+                                break
+                            }
+                            echo "⏳ SonarQube pas encore prêt, nouvelle tentative dans 10 secondes..."
+                            bat 'timeout /t 10'
+                        }
+                        if (sonarReady) {
+                            echo '✅ SonarQube est prêt !'
+                        } else {
+                            echo '⚠️ SonarQube ne répond pas, mais on continue...'
+                        }
+                    }
+                }
+            }
+        }
+
         // ─── 6. SonarQube Analysis ────────────────────────────────────
         stage('SonarQube Analysis') {
             environment {
@@ -159,7 +188,6 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube Local') {
                     dir('D:/marketplace-clean') {
-                        // Utilise le chemin complet vers sonarscanner pour éviter les problèmes de PATH
                         script {
                             def scannerPath = powershell(
                                 script: 'Write-Output "$env:USERPROFILE\\.dotnet\\tools\\dotnet-sonarscanner.exe"',
@@ -194,8 +222,6 @@ pipeline {
                     def qg = waitForQualityGate abortPipeline: false
                     if (qg.status != 'OK') {
                         echo "⚠️ Quality Gate : ${qg.status} — voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                        // Décommenter pour bloquer le pipeline :
-                        // error("Quality Gate FAILED: ${qg.status}")
                     } else {
                         echo '✅ Quality Gate : PASSED'
                     }
@@ -307,7 +333,7 @@ pipeline {
    • Mongo Express (Orders)   : http://localhost:8082
    • RabbitMQ Management      : http://localhost:15672
    • Neo4j Browser            : http://localhost:7474
-   • SonarQube                : http://172.18.0.10:9000
+   • SonarQube                : http://localhost:9000
                     """
                 }
             }
