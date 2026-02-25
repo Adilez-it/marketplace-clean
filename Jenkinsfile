@@ -184,64 +184,63 @@ pipeline {
             }
         }
 
-// ─── 6. SonarQube Analysis ────────────────────────────────────
-stage('SonarQube Analysis') {
-    environment {
-        SONAR_TOKEN = credentials('sonar-token-id')
-    }
-    steps {
-        withSonarQubeEnv('SonarQube Local') {
-            dir('D:/marketplace-clean') {
-                script {
-                    def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
-                    echo "🔍 SonarScanner path : ${scannerPath}"
+        // ─── 6. SonarQube Analysis ────────────────────────────────────
+    stage('SonarQube Analysis') {
+            environment {
+                SONAR_TOKEN = credentials('sonar-token-id')
+            }
+            steps {
+                withSonarQubeEnv('SonarQube Local') {
+                    dir('D:/marketplace-clean') {
+                        script {
+                            def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
+                            echo "🔍 SonarScanner path : ${scannerPath}"
 
-                    // BEGIN
-                    bat """
-                        "${scannerPath}" begin ^
-                            /k:"marketplace" ^
-                            /n:"Marketplace Microservices" ^
-                            /v:"1.0" ^
-                            /d:sonar.host.url=${SONAR_HOST_URL} ^
-                            /d:sonar.token=%SONAR_TOKEN% ^
-                            /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
-                            /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
-                            /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
-                            /d:sonar.sourceEncoding=UTF-8
-                    """
+                            // BEGIN
+                            bat """
+                                "${scannerPath}" begin ^
+                                    /k:"marketplace" ^
+                                    /n:"Marketplace Microservices" ^
+                                    /v:"1.0" ^
+                                    /d:sonar.host.url=${SONAR_HOST_URL} ^
+                                    /d:sonar.token=%SONAR_TOKEN% ^
+                                    /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
+                                    /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
+                                    /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
+                                    /d:sonar.sourceEncoding=UTF-8
+                            """
 
-                    // BUILD
-                    bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
-                    bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
-                    bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
-                    bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
+                            // BUILD
+                            bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
+                            bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
+                            bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
+                            bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
 
-                    // TESTS
-                    bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                    bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                    bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+                            // TESTS
+                            bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                            bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                            bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
-                    // END
-                    bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
+                            // END
+                            bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
        // ─── 7. Quality Gate ──────────────────────────────────────────
-stage('Quality Gate') {
+    stage('Quality Gate') {
     steps {
         script {
             echo '⏳ Attente Quality Gate SonarQube...'
-            // Attendre le résultat de l'analyse SonarQube
-            def qg = waitForQualityGate abortPipeline: false
-            if (qg.status != 'OK') {
-                echo "⚠️ Quality Gate : ${qg.status} — voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                // Décommenter pour bloquer le pipeline si nécessaire
-                // error("Quality Gate FAILED: ${qg.status}")
-            } else {
-                echo '✅ Quality Gate : PASSED'
+            timeout(time: 5, unit: 'MINUTES') {
+                def qg = waitForQualityGate abortPipeline: true
+                if (qg.status != 'OK') {
+                    error "❌ Quality Gate FAILED: ${qg.status}"
+                } else {
+                    echo '✅ Quality Gate : PASSED'
+                }
             }
         }
     }
