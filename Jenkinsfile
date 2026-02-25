@@ -162,14 +162,16 @@ stage('SonarQube Analysis + Quality Gate') {
     }
     steps {
         withSonarQubeEnv('SonarQube Local') {
-            script {
-                dir('D:/marketplace-clean') {
-
+            dir('D:/marketplace-clean') {
+                script {
+                    def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
+                    echo "🔍 Scanner path: ${scannerPath}"
+                    
                     // Vérifie que le scanner existe
-                    bat 'if not exist "%SONAR_SCANNER%" (echo ERREUR: sonarscanner introuvable && exit 1)'
+                    bat "if not exist \"${scannerPath}\" (echo ERREUR: sonarscanner introuvable && exit 1)"
 
                     // BEGIN
-                    bat "\"%SONAR_SCANNER%\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
+                    bat "\"${scannerPath}\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=${SONAR_HOST_URL} /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
 
                     // BUILD
                     bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
@@ -183,26 +185,24 @@ stage('SonarQube Analysis + Quality Gate') {
                     bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
                     // END
-                    bat "\"%SONAR_SCANNER%\" end /d:sonar.token=%SONAR_TOKEN%"
+                    bat "\"${scannerPath}\" end /d:sonar.token=%SONAR_TOKEN%"
 
                     // ✅ Copie report-task.txt
-                    echo '📋 Copie de report-task.txt vers le workspace Jenkins...'
-                    bat '''
-                        copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\.sonar\\report-task.txt" "%WORKSPACE%\\report-task.txt"
-                        echo ✅ Fichier copié avec succès
-                        echo 📄 Contenu du fichier:
-                        type "%WORKSPACE%\\report-task.txt"
-                    '''
-
-                    // ✅ waitForQualityGate DANS le même bloc dir() et script()
-                    echo '⏳ Attente du Quality Gate SonarQube...'
-                    timeout(time: 5, unit: 'MINUTES') {
-                        def qg = waitForQualityGate abortPipeline: false
-                        if (qg.status != 'OK') {
-                            echo "⚠️ Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                        } else {
-                            echo '✅ Quality Gate : PASSED'
-                        }
+                    echo '📋 Copie de report-task.txt...'
+                    bat 'copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\.sonar\\report-task.txt" "%WORKSPACE%\\report-task.txt"'
+                    bat 'type "%WORKSPACE%\\report-task.txt"'
+                }
+            }
+            
+            // ✅ waitForQualityGate APRÈS le dir(), mais DANS withSonarQubeEnv
+            script {
+                echo '⏳ Attente du Quality Gate SonarQube...'
+                timeout(time: 5, unit: 'MINUTES') {
+                    def qg = waitForQualityGate abortPipeline: false
+                    if (qg.status != 'OK') {
+                        echo "⚠️ Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                    } else {
+                        echo '✅ Quality Gate : PASSED'
                     }
                 }
             }
