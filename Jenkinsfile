@@ -156,7 +156,7 @@ pipeline {
         //   => On copie report-task.txt dans %WORKSPACE% apres le end
         //   => waitForQualityGate doit rester dans withSonarQubeEnv pour avoir les variables injectees
         // ---------------------------------------------------------------
-        stage('SonarQube Analysis + Quality Gate') {
+stage('SonarQube Analysis + Quality Gate') {
     environment {
         SONAR_TOKEN = credentials('sonar-token-id')
     }
@@ -185,7 +185,7 @@ pipeline {
                     // END
                     bat "\"%SONAR_SCANNER%\" end /d:sonar.token=%SONAR_TOKEN%"
 
-                    // ✅ Copie report-task.txt du bon endroit (maintenant qu'on connaît le chemin exact)
+                    // ✅ Copie report-task.txt
                     echo '📋 Copie de report-task.txt vers le workspace Jenkins...'
                     bat '''
                         copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\.sonar\\report-task.txt" "%WORKSPACE%\\report-task.txt"
@@ -193,18 +193,16 @@ pipeline {
                         echo 📄 Contenu du fichier:
                         type "%WORKSPACE%\\report-task.txt"
                     '''
-                }
 
-                // waitForQualityGate dans withSonarQubeEnv
-                echo '⏳ Attente du Quality Gate SonarQube...'
-                timeout(time: 5, unit: 'MINUTES') {
-                    def qg = waitForQualityGate abortPipeline: false
-                    if (qg.status != 'OK') {
-                        echo "⚠️ Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                        // Décommenter pour bloquer le pipeline si qualité insuffisante
-                        // error "Quality Gate FAILED: ${qg.status}"
-                    } else {
-                        echo '✅ Quality Gate : PASSED'
+                    // ✅ waitForQualityGate DANS le même bloc dir() et script()
+                    echo '⏳ Attente du Quality Gate SonarQube...'
+                    timeout(time: 5, unit: 'MINUTES') {
+                        def qg = waitForQualityGate abortPipeline: false
+                        if (qg.status != 'OK') {
+                            echo "⚠️ Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                        } else {
+                            echo '✅ Quality Gate : PASSED'
+                        }
                     }
                 }
             }
