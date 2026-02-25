@@ -147,38 +147,43 @@ pipeline {
             }
         }
 
-        // ─── 5.5 Start SonarQube ─────────────────────────────────────
-        stage('Start SonarQube') {
-            steps {
-                dir('D:/marketplace-clean') {
-                    bat 'docker-compose up -d sonarqube'
-                    echo '⏳ Attente que SonarQube soit prêt (30 secondes)...'
-                    bat 'timeout /t 30'
+       // ─── 5.5 Start SonarQube ─────────────────────────────────────
+stage('Start SonarQube') {
+    steps {
+        dir('D:/marketplace-clean') {
+            bat 'docker-compose up -d sonarqube'
+            echo '⏳ Attente que SonarQube soit prêt...'
+            
+            // Attente initiale de 15 secondes
+            bat 'ping 127.0.0.1 -n 15 > nul'
+            
+            script {
+                def sonarReady = false
+                def maxRetries = 12
+                
+                for (int i = 0; i < maxRetries; i++) {
+                    def status = bat(
+                        script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
+                        returnStdout: true
+                    ).trim()
                     
-                    // Vérification supplémentaire que SonarQube répond
-                    script {
-                        def sonarReady = false
-                        for (int i = 0; i < 6; i++) {
-                            def status = bat(
-                                script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
-                                returnStdout: true
-                            ).trim()
-                            if (status == '200' || status == '302') {
-                                sonarReady = true
-                                break
-                            }
-                            echo "⏳ SonarQube pas encore prêt, nouvelle tentative dans 10 secondes..."
-                            bat 'timeout /t 10'
-                        }
-                        if (sonarReady) {
-                            echo '✅ SonarQube est prêt !'
-                        } else {
-                            echo '⚠️ SonarQube ne répond pas, mais on continue...'
-                        }
+                    if (status == '200' || status == '302') {
+                        sonarReady = true
+                        echo '✅ SonarQube est prêt !'
+                        break
                     }
+                    
+                    echo "⏳ SonarQube pas encore prêt (tentative ${i+1}/${maxRetries}), nouvelle tentative dans 5 secondes..."
+                    bat 'ping 127.0.0.1 -n 6 > nul'  // ping 6 fois ≈ 5 secondes
+                }
+                
+                if (!sonarReady) {
+                    echo '⚠️ SonarQube ne répond pas après plusieurs tentatives, mais on continue...'
                 }
             }
         }
+    }
+}
 
         // ─── 6. SonarQube Analysis ────────────────────────────────────
         stage('SonarQube Analysis') {
