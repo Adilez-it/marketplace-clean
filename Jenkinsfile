@@ -5,9 +5,6 @@ pipeline {
         JENKINS_PORT   = '7070'
         NGROK_REGION   = 'eu'
         SONAR_HOST_URL = 'http://172.18.0.10:9000'
-        // Token dans Jenkins Credentials (ID: sonar-token-id)
-        // Jenkins > Manage > Credentials > Global > Add: Secret text
-        // Secret: squ_f2e70195d0c3235c6c65a373d3edd54f5976f648
     }
 
     stages {
@@ -53,7 +50,7 @@ pipeline {
             }
         }
 
-        // ─── 3. Build + Tests en parallèle ───────────────────────────
+        // ─── 3. Build en parallèle ────────────────────────────────────
         stage('Build Microservices') {
             parallel {
                 stage('Product API') {
@@ -91,29 +88,13 @@ pipeline {
             }
         }
 
-        // ─── 4. Tests unitaires avec rapport TRX ─────────────────────
+        // ─── 4. Unit Tests ────────────────────────────────────────────
         stage('Unit Tests') {
             steps {
                 dir('D:/marketplace-clean') {
-                    bat '''
-                        dotnet test Tests\Product.API.Tests\Product.API.Tests.csproj ^
-                            --configuration Release ^
-                            --collect:"XPlat Code Coverage" ^
-                            --results-directory TestResults\Product ^
-                            --logger "trx;LogFileName=product-results.trx"
-
-                        dotnet test Tests\Order.API.Tests\Order.API.Tests.csproj ^
-                            --configuration Release ^
-                            --collect:"XPlat Code Coverage" ^
-                            --results-directory TestResults\Order ^
-                            --logger "trx;LogFileName=order-results.trx"
-
-                        dotnet test Tests\Recommendation.API.Tests\Recommendation.API.Tests.csproj ^
-                            --configuration Release ^
-                            --collect:"XPlat Code Coverage" ^
-                            --results-directory TestResults\Recommendation ^
-                            --logger "trx;LogFileName=recommendation-results.trx"
-                    '''
+                    bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults/Product --logger "trx;LogFileName=product-results.trx"'
+                    bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults/Order --logger "trx;LogFileName=order-results.trx"'
+                    bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --collect:"XPlat Code Coverage" --results-directory TestResults/Recommendation --logger "trx;LogFileName=recommendation-results.trx"'
                 }
             }
             post {
@@ -124,24 +105,17 @@ pipeline {
             }
         }
 
-        // ─── 5. SonarQube Analysis (.NET Scanner) ─────────────────────
+        // ─── 5. SonarQube Analysis ────────────────────────────────────
         //
-        //  PRÉ-REQUIS (une seule fois sur la machine Jenkins) :
-        //  ─────────────────────────────────────────────────────
-        //  1) Installer le scanner .NET globalement :
-        //       dotnet tool install --global dotnet-sonarscanner
-        //
-        //  2) Ajouter le credential dans Jenkins :
-        //       Manage Jenkins > Credentials > Global > Add Credentials
-        //       Kind    : Secret text
-        //       ID      : sonar-token-id
-        //       Secret  : squ_f2e70195d0c3235c6c65a373d3edd54f5976f648
-        //
-        //  3) Configurer le serveur SonarQube dans Jenkins :
-        //       Manage Jenkins > Configure System > SonarQube servers
-        //       Name             : SonarQube Local
-        //       Server URL       : http://172.18.0.10:9000
-        //       Server auth token: sonar-token-id
+        //  PRE-REQUIS (une seule fois) :
+        //  1) dotnet tool install --global dotnet-sonarscanner
+        //  2) Jenkins > Credentials > Global > Secret text
+        //       ID     : sonar-token-id
+        //       Secret : squ_f2e70195d0c3235c6c65a373d3edd54f5976f648
+        //  3) Jenkins > Configure System > SonarQube servers
+        //       Name : SonarQube Local
+        //       URL  : http://172.18.0.10:9000
+        //       Token: sonar-token-id
         //
         stage('SonarQube Analysis') {
             environment {
@@ -151,53 +125,19 @@ pipeline {
                 withSonarQubeEnv('SonarQube Local') {
                     dir('D:/marketplace-clean') {
 
-                        // -- BEGIN : démarre l'analyse SonarQube
-                        bat """
-                            dotnet sonarscanner begin ^
-                                /k:"marketplace" ^
-                                /n:"Marketplace Microservices" ^
-                                /v:"1.0" ^
-                                /d:sonar.host.url=%SONAR_HOST_URL% ^
-                                /d:sonar.token=%SONAR_TOKEN% ^
-                                /d:sonar.cs.opencover.reportsPaths=**\\TestResults\\**\\coverage.opencover.xml ^
-                                /d:sonar.exclusions=**\\bin\\**,**\\obj\\**,**\\Migrations\\** ^
-                                /d:sonar.coverage.exclusions=**\\Tests\\**,**\\Program.cs ^
-                                /d:sonar.test.inclusions=**\\Tests\\** ^
-                                /d:sonar.sourceEncoding=UTF-8
-                        """
+                        // BEGIN - démarre la session d'analyse
+                        bat "dotnet sonarscanner begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
 
-                        // -- BUILD : build complet pour que SonarQube analyse les sources
+                        // BUILD - compilation complète interceptée par SonarQube
                         bat 'dotnet build --configuration Release'
 
-                        // -- TESTS avec couverture OpenCover pour SonarQube
-                        bat '''
-                            dotnet test Tests\Product.API.Tests\Product.API.Tests.csproj ^
-                                --configuration Release ^
-                                --no-build ^
-                                /p:CollectCoverage=true ^
-                                /p:CoverletOutputFormat=opencover ^
-                                /p:CoverletOutput=TestResults\Product\coverage.opencover.xml ^
+                        // TESTS - avec couverture OpenCover
+                        bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                        bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                        bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
-                            dotnet test Tests\Order.API.Tests\Order.API.Tests.csproj ^
-                                --configuration Release ^
-                                --no-build ^
-                                /p:CollectCoverage=true ^
-                                /p:CoverletOutputFormat=opencover ^
-                                /p:CoverletOutput=TestResults\Order\coverage.opencover.xml
-
-                            dotnet test Tests\Recommendation.API.Tests\Recommendation.API.Tests.csproj ^
-                                --configuration Release ^
-                                --no-build ^
-                                /p:CollectCoverage=true ^
-                                /p:CoverletOutputFormat=opencover ^
-                                /p:CoverletOutput=TestResults\Recommendation\coverage.opencover.xml
-                        '''
-
-                        // -- END : envoie les résultats au serveur SonarQube
-                        bat """
-                            dotnet sonarscanner end ^
-                                /d:sonar.token=%SONAR_TOKEN%
-                        """
+                        // END - envoie les résultats au serveur SonarQube
+                        bat "dotnet sonarscanner end /d:sonar.token=%SONAR_TOKEN%"
                     }
                 }
             }
@@ -207,16 +147,14 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    echo '⏳ Attente du résultat Quality Gate SonarQube...'
-                    // Attend max 5 minutes le webhook de SonarQube vers Jenkins
+                    echo '⏳ Attente Quality Gate SonarQube...'
                     def qg = waitForQualityGate abortPipeline: false
                     if (qg.status != 'OK') {
-                        echo "⚠️ Quality Gate : ${qg.status}"
-                        echo "🔍 Détails : ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                        // Décommenter pour bloquer le pipeline si Quality Gate échoue :
+                        echo "⚠️ Quality Gate : ${qg.status} — voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                        // Décommenter pour bloquer le pipeline :
                         // error("Quality Gate FAILED: ${qg.status}")
                     } else {
-                        echo "✅ Quality Gate : PASSED ✓"
+                        echo '✅ Quality Gate : PASSED'
                     }
                 }
             }
@@ -226,12 +164,10 @@ pipeline {
         stage('Docker Build') {
             steps {
                 dir('D:/marketplace-clean') {
-                    bat '''
-                        docker build -t product-api:latest        ./Product.API
-                        docker build -t order-api:latest          ./Order.API
-                        docker build -t recommendation-api:latest ./Recommendation.API
-                        docker build -t apigateway:latest         ./ApiGateway
-                    '''
+                    bat 'docker build -t product-api:latest ./Product.API'
+                    bat 'docker build -t order-api:latest ./Order.API'
+                    bat 'docker build -t recommendation-api:latest ./Recommendation.API'
+                    bat 'docker build -t apigateway:latest ./ApiGateway'
                 }
             }
         }
@@ -240,10 +176,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 dir('D:/marketplace-clean') {
-                    bat '''
-                        docker-compose down
-                        docker-compose up -d
-                    '''
+                    bat 'docker-compose down'
+                    bat 'docker-compose up -d'
                 }
             }
         }
@@ -269,10 +203,9 @@ pipeline {
                         allHealthy = true
 
                         for (service in services) {
-                            def tempFile = "health_${service.name.replace(' ', '_')}.txt"
-                            bat """
-                                curl -s -o nul -w "%%{http_code}" --connect-timeout 5 --max-time 10 ${service.url} > ${tempFile} 2>&1
-                            """
+                            def safeName = service.name.replace(' ', '_')
+                            def tempFile = "health_${safeName}.txt"
+                            bat "curl -s -o nul -w \"%%{http_code}\" --connect-timeout 5 --max-time 10 ${service.url} > ${tempFile} 2>&1"
                             def result = readFile(file: tempFile).trim().replaceAll('[^0-9]', '')
                             bat "del ${tempFile} 2>nul || exit 0"
 
@@ -285,26 +218,23 @@ pipeline {
                         }
 
                         if (allHealthy) {
-                            echo "✅ Tous les services sont opérationnels !"
+                            echo '✅ Tous les services sont opérationnels !'
                             break
                         } else if (i < maxRetries - 1) {
-                            echo "Nouvelle tentative dans 10 secondes..."
+                            echo 'Nouvelle tentative dans 10 secondes...'
                             bat 'ping 127.0.0.1 -n 10 > nul'
                         }
                     }
 
                     if (!allHealthy) {
                         dir('D:/marketplace-clean') {
-                            bat '''
-                                echo === LOGS SERVICES ===
-                                docker-compose logs --tail=30 apigateway
-                                docker-compose logs --tail=30 product.api
-                                docker-compose logs --tail=30 order.api
-                                docker-compose logs --tail=30 recommendation.api
-                                docker-compose ps
-                            '''
+                            bat 'docker-compose logs --tail=30 apigateway'
+                            bat 'docker-compose logs --tail=30 product.api'
+                            bat 'docker-compose logs --tail=30 order.api'
+                            bat 'docker-compose logs --tail=30 recommendation.api'
+                            bat 'docker-compose ps'
                         }
-                        error("❌ Health check échoué — certains services ne répondent pas")
+                        error('❌ Health check échoué — certains services ne répondent pas')
                     }
                 }
             }
@@ -334,6 +264,7 @@ pipeline {
    • Mongo Express (Orders)   : http://localhost:8082
    • RabbitMQ Management      : http://localhost:15672
    • Neo4j Browser            : http://localhost:7474
+   • SonarQube                : http://172.18.0.10:9000
                     """
                 }
             }
