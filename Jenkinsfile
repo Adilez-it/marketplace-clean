@@ -4,7 +4,7 @@ pipeline {
     environment {
         JENKINS_PORT   = '7070'
         NGROK_REGION   = 'eu'
-        SONAR_HOST_URL = 'http://localhost:9000'  // Changé de 172.18.0.10 à localhost
+        SONAR_HOST_URL = 'http://localhost:9000'
     }
 
     stages {
@@ -147,43 +147,42 @@ pipeline {
             }
         }
 
-       // ─── 5.5 Start SonarQube ─────────────────────────────────────
-stage('Start SonarQube') {
-    steps {
-        dir('D:/marketplace-clean') {
-            bat 'docker-compose up -d sonarqube'
-            echo '⏳ Attente que SonarQube soit prêt...'
-            
-            // Attente initiale de 15 secondes
-            bat 'ping 127.0.0.1 -n 15 > nul'
-            
-            script {
-                def sonarReady = false
-                def maxRetries = 12
-                
-                for (int i = 0; i < maxRetries; i++) {
-                    def status = bat(
-                        script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
-                        returnStdout: true
-                    ).trim()
+        // ─── 5.5 Start SonarQube ─────────────────────────────────────
+        stage('Start SonarQube') {
+            steps {
+                dir('D:/marketplace-clean') {
+                    bat 'docker-compose up -d sonarqube'
+                    echo '⏳ Attente que SonarQube soit prêt...'
                     
-                    if (status == '200' || status == '302') {
-                        sonarReady = true
-                        echo '✅ SonarQube est prêt !'
-                        break
+                    bat 'ping 127.0.0.1 -n 15 > nul'
+                    
+                    script {
+                        def sonarReady = false
+                        def maxRetries = 12
+                        
+                        for (int i = 0; i < maxRetries; i++) {
+                            def status = bat(
+                                script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (status == '200' || status == '302') {
+                                sonarReady = true
+                                echo '✅ SonarQube est prêt !'
+                                break
+                            }
+                            
+                            echo "⏳ SonarQube pas encore prêt (tentative ${i+1}/${maxRetries}), nouvelle tentative dans 5 secondes..."
+                            bat 'ping 127.0.0.1 -n 6 > nul'
+                        }
+                        
+                        if (!sonarReady) {
+                            echo '⚠️ SonarQube ne répond pas après plusieurs tentatives, mais on continue...'
+                        }
                     }
-                    
-                    echo "⏳ SonarQube pas encore prêt (tentative ${i+1}/${maxRetries}), nouvelle tentative dans 5 secondes..."
-                    bat 'ping 127.0.0.1 -n 6 > nul'  // ping 6 fois ≈ 5 secondes
-                }
-                
-                if (!sonarReady) {
-                    echo '⚠️ SonarQube ne répond pas après plusieurs tentatives, mais on continue...'
                 }
             }
         }
-    }
-}
 
         // ─── 6. SonarQube Analysis ────────────────────────────────────
         stage('SonarQube Analysis') {
@@ -191,29 +190,34 @@ stage('Start SonarQube') {
                 SONAR_TOKEN = credentials('sonar-token-id')
             }
             steps {
-                withSonarQubeEnv('SonarQube Local') {
-                    dir('D:/marketplace-clean') {
-                        script {
-                            def scannerPath = powershell(
-                                script: 'Write-Output "$env:USERPROFILE\\.dotnet\\tools\\dotnet-sonarscanner.exe"',
-                                returnStdout: true
-                            ).trim()
-                            echo "🔍 SonarScanner path : ${scannerPath}"
+                dir('D:/marketplace-clean') {
+                    script {
+                        def scannerPath = powershell(
+                            script: 'Write-Output "$env:USERPROFILE\\.dotnet\\tools\\dotnet-sonarscanner.exe"',
+                            returnStdout: true
+                        ).trim()
+                        echo "🔍 SonarScanner path : ${scannerPath}"
 
-                            // BEGIN
-                            bat "\"${scannerPath}\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
+                        bat """
+                            "${scannerPath}" begin ^
+                                /k:"marketplace" ^
+                                /n:"Marketplace Microservices" ^
+                                /v:"1.0" ^
+                                /d:sonar.host.url=${SONAR_HOST_URL} ^
+                                /d:sonar.token=%SONAR_TOKEN% ^
+                                /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
+                                /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
+                                /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
+                                /d:sonar.sourceEncoding=UTF-8
+                        """
 
-                            // BUILD
-                            bat 'dotnet build --configuration Release'
+                        bat 'dotnet build --configuration Release'
 
-                            // TESTS avec couverture OpenCover
-                            bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                            bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                            bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+                        bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                        bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                        bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
-                            // END
-                            bat "\"${scannerPath}\" end /d:sonar.token=%SONAR_TOKEN%"
-                        }
+                        bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
                     }
                 }
             }
