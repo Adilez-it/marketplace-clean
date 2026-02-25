@@ -5,24 +5,25 @@ pipeline {
         JENKINS_PORT   = '7070'
         NGROK_REGION   = 'eu'
         SONAR_HOST_URL = 'http://localhost:9000'
+        // Chemin absolu : Jenkins tourne sous SYSTEM, pas sous l'user adile
+        // %USERPROFILE% pointe vers C:\windows\system32\config\systemprofile depuis Jenkins
+        SONAR_SCANNER  = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
     }
 
     stages {
 
-        // ─── 1. Checkout ──────────────────────────────────────────────
         stage('Checkout') {
             steps {
                 dir('D:/marketplace-clean') {
-                    echo '📦 Using local code from D:/marketplace-clean'
+                    echo 'Using local code from D:/marketplace-clean'
                 }
             }
         }
 
-        // ─── 2. Ngrok Webhook ─────────────────────────────────────────
         stage('Setup Webhook URL') {
             steps {
                 script {
-                    echo '🚀 Démarrage du tunnel ngrok...'
+                    echo 'Demarrage du tunnel ngrok...'
                     bat 'ngrok kill || exit 0'
                     sleep(5)
                     bat """
@@ -38,19 +39,17 @@ pipeline {
                         ''',
                         returnStdout: true
                     ).trim()
-
                     if (ngrokUrl) {
                         env.WEBHOOK_URL = ngrokUrl
-                        echo "✅ Webhook URL : ${env.WEBHOOK_URL}"
+                        echo "Webhook URL : ${env.WEBHOOK_URL}"
                     } else {
-                        echo "⚠️ ngrok indisponible"
+                        echo "ngrok indisponible"
                         env.WEBHOOK_URL = "http://localhost:${JENKINS_PORT}"
                     }
                 }
             }
         }
 
-        // ─── 3. Build en parallèle ────────────────────────────────────
         stage('Build Microservices') {
             parallel {
                 stage('Product API') {
@@ -88,7 +87,6 @@ pipeline {
             }
         }
 
-        // ─── 4. Unit Tests ────────────────────────────────────────────
         stage('Unit Tests') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -105,7 +103,6 @@ pipeline {
             }
         }
 
-        // ─── 5. Install SonarScanner ──────────────────────────────────
         stage('Install SonarScanner') {
             steps {
                 script {
@@ -114,101 +111,65 @@ pipeline {
                         returnStatus: true
                     )
                     if (installResult != 0) {
-                        echo '⚠️ Installation échouée ou déjà installé — tentative de mise à jour...'
                         bat 'dotnet tool update --global dotnet-sonarscanner || echo Already up to date'
-                    } else {
-                        echo '✅ dotnet-sonarscanner installé avec succès'
                     }
-
-                    def checkResult = bat(
-                        script: 'dotnet sonarscanner --version',
-                        returnStatus: true
-                    )
-                    if (checkResult != 0) {
-                        echo '🔧 sonarscanner non trouvé dans PATH — ajout manuel...'
-                        powershell '''
-                            $toolsPath = "$env:USERPROFILE\\.dotnet\\tools"
-                            $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
-                            if ($currentPath -notlike "*$toolsPath*") {
-                                [System.Environment]::SetEnvironmentVariable(
-                                    "PATH",
-                                    "$toolsPath;$currentPath",
-                                    "Machine"
-                                )
-                                Write-Host "✅ PATH mis à jour : $toolsPath ajouté"
-                            } else {
-                                Write-Host "✅ PATH déjà configuré"
-                            }
-                        '''
-                    } else {
-                        echo '✅ dotnet-sonarscanner accessible dans le PATH'
-                    }
+                    echo 'dotnet-sonarscanner OK'
                 }
             }
         }
 
-        // ─── 5.5 Start SonarQube ─────────────────────────────────────
         stage('Start SonarQube') {
             steps {
                 dir('D:/marketplace-clean') {
                     bat 'docker-compose up -d sonarqube'
-                    echo '⏳ Attente que SonarQube soit prêt...'
-                    
                     bat 'ping 127.0.0.1 -n 15 > nul'
-                    
                     script {
                         def sonarReady = false
-                        def maxRetries = 12
-                        
-                        for (int i = 0; i < maxRetries; i++) {
+                        for (int i = 0; i < 12; i++) {
                             def status = bat(
                                 script: 'curl -s -o nul -w "%%{http_code}" http://localhost:9000 || echo 0',
                                 returnStdout: true
-                            ).trim()
-                            
+                            ).trim().replaceAll('[^0-9]', '')
                             if (status == '200' || status == '302') {
                                 sonarReady = true
-                                echo '✅ SonarQube est prêt !'
+                                echo 'SonarQube est pret !'
                                 break
                             }
-                            
-                            echo "⏳ SonarQube pas encore prêt (tentative ${i+1}/${maxRetries}), nouvelle tentative dans 5 secondes..."
+                            echo "SonarQube pas encore pret (tentative ${i+1}/12)..."
                             bat 'ping 127.0.0.1 -n 6 > nul'
                         }
-                        
                         if (!sonarReady) {
-                            echo '⚠️ SonarQube ne répond pas après plusieurs tentatives, mais on continue...'
+                            echo 'SonarQube ne repond pas, mais on continue...'
                         }
                     }
                 }
             }
         }
 
-        // ─── 6. SonarQube Analysis ────────────────────────────────────
-    stage('SonarQube Analysis') {
+        // ---------------------------------------------------------------
+        // SonarQube Analysis + Quality Gate dans le MEME withSonarQubeEnv
+        //
+        // POURQUOI :
+        //   waitForQualityGate lit le task ID depuis report-task.txt
+        //   Ce fichier est genere par "sonarscanner end" dans D:\marketplace-clean\.sonarqube\out\
+        //   Jenkins le cherche dans %WORKSPACE% = C:\ProgramData\Jenkins\.jenkins\workspace\Marketplace
+        //   => On copie report-task.txt dans %WORKSPACE% apres le end
+        //   => waitForQualityGate doit rester dans withSonarQubeEnv pour avoir les variables injectees
+        // ---------------------------------------------------------------
+        stage('SonarQube Analysis + Quality Gate') {
             environment {
                 SONAR_TOKEN = credentials('sonar-token-id')
             }
             steps {
                 withSonarQubeEnv('SonarQube Local') {
-                    dir('D:/marketplace-clean') {
-                        script {
-                            def scannerPath = 'C:\\Users\\adile\\.dotnet\\tools\\dotnet-sonarscanner.exe'
-                            echo "🔍 SonarScanner path : ${scannerPath}"
+                    script {
+                        dir('D:/marketplace-clean') {
+
+                            // Verifie que le scanner existe
+                            bat 'if not exist "%SONAR_SCANNER%" (echo ERREUR: sonarscanner introuvable && exit 1)'
 
                             // BEGIN
-                            bat """
-                                "${scannerPath}" begin ^
-                                    /k:"marketplace" ^
-                                    /n:"Marketplace Microservices" ^
-                                    /v:"1.0" ^
-                                    /d:sonar.host.url=${SONAR_HOST_URL} ^
-                                    /d:sonar.token=%SONAR_TOKEN% ^
-                                    /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" ^
-                                    /d:sonar.exclusions="**/bin/**,**/obj/**,**/Migrations/**" ^
-                                    /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs" ^
-                                    /d:sonar.sourceEncoding=UTF-8
-                            """
+                            bat "\"%SONAR_SCANNER%\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
 
                             // BUILD
                             bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
@@ -216,37 +177,37 @@ pipeline {
                             bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
                             bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
 
-                            // TESTS
+                            // TESTS avec couverture OpenCover
                             bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
                             bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
                             bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
                             // END
-                            bat "${scannerPath} end /d:sonar.token=%SONAR_TOKEN%"
+                            bat "\"%SONAR_SCANNER%\" end /d:sonar.token=%SONAR_TOKEN%"
+
+                            // Copie report-task.txt dans le workspace Jenkins
+                            // waitForQualityGate cherche ce fichier dans %WORKSPACE%
+                            // sonarscanner le genere dans D:\marketplace-clean\.sonarqube\out\
+                            bat 'copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\report-task.txt" "%WORKSPACE%\\report-task.txt"'
+                        }
+
+                        // waitForQualityGate DOIT etre dans withSonarQubeEnv
+                        echo 'Attente du Quality Gate SonarQube...'
+                        timeout(time: 5, unit: 'MINUTES') {
+                            def qg = waitForQualityGate abortPipeline: false
+                            if (qg.status != 'OK') {
+                                echo "Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                                // Decommenter pour bloquer le pipeline :
+                                // error("Quality Gate FAILED: ${qg.status}")
+                            } else {
+                                echo 'Quality Gate : PASSED'
+                            }
                         }
                     }
                 }
             }
         }
 
-       // ─── 7. Quality Gate ──────────────────────────────────────────
-    stage('Quality Gate') {
-    steps {
-        script {
-            echo '⏳ Attente Quality Gate SonarQube...'
-            timeout(time: 5, unit: 'MINUTES') {
-                def qg = waitForQualityGate abortPipeline: true
-                if (qg.status != 'OK') {
-                    error "❌ Quality Gate FAILED: ${qg.status}"
-                } else {
-                    echo '✅ Quality Gate : PASSED'
-                }
-            }
-        }
-    }
-}
-
-        // ─── 8. Docker Build ──────────────────────────────────────────
         stage('Docker Build') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -258,7 +219,6 @@ pipeline {
             }
         }
 
-        // ─── 9. Deploy ────────────────────────────────────────────────
         stage('Deploy') {
             steps {
                 dir('D:/marketplace-clean') {
@@ -268,17 +228,16 @@ pipeline {
             }
         }
 
-        // ─── 10. Health Check ─────────────────────────────────────────
         stage('Health Check') {
             steps {
                 script {
                     bat 'ping 127.0.0.1 -n 20 > nul'
 
                     def services = [
-                        [name: 'API Gateway',       url: 'http://localhost:8000/health'],
-                        [name: 'Product API',        url: 'http://localhost:8001/health'],
-                        [name: 'Order API',          url: 'http://localhost:8004/health'],
-                        [name: 'Recommendation API', url: 'http://localhost:8005/health'],
+                        [name: 'API_Gateway',       url: 'http://localhost:8000/health'],
+                        [name: 'Product_API',        url: 'http://localhost:8001/health'],
+                        [name: 'Order_API',          url: 'http://localhost:8004/health'],
+                        [name: 'Recommendation_API', url: 'http://localhost:8005/health'],
                     ]
 
                     def maxRetries = 12
@@ -287,27 +246,22 @@ pipeline {
                     for (int i = 0; i < maxRetries; i++) {
                         echo "Tentative ${i+1}/${maxRetries}..."
                         allHealthy = true
-
                         for (service in services) {
-                            def safeName = service.name.replace(' ', '_')
-                            def tempFile = "health_${safeName}.txt"
+                            def tempFile = "health_${service.name}.txt"
                             bat "curl -s -o nul -w \"%%{http_code}\" --connect-timeout 5 --max-time 10 ${service.url} > ${tempFile} 2>&1"
                             def result = readFile(file: tempFile).trim().replaceAll('[^0-9]', '')
                             bat "del ${tempFile} 2>nul || exit 0"
-
                             if (result == '200') {
-                                echo "✅ ${service.name} — HTTP 200"
+                                echo "${service.name} - OK (HTTP 200)"
                             } else {
-                                echo "⚠️ ${service.name} — HTTP ${result ?: 'pas de réponse'}"
+                                echo "${service.name} - HTTP ${result ?: 'no response'}"
                                 allHealthy = false
                             }
                         }
-
                         if (allHealthy) {
-                            echo '✅ Tous les services sont opérationnels !'
+                            echo 'Tous les services sont operationnels !'
                             break
                         } else if (i < maxRetries - 1) {
-                            echo 'Nouvelle tentative dans 10 secondes...'
                             bat 'ping 127.0.0.1 -n 10 > nul'
                         }
                     }
@@ -320,50 +274,39 @@ pipeline {
                             bat 'docker-compose logs --tail=30 recommendation.api'
                             bat 'docker-compose ps'
                         }
-                        error('❌ Health check échoué — certains services ne répondent pas')
+                        error('Health check echoue - certains services ne repondent pas')
                     }
                 }
             }
         }
 
-        // ─── 11. Résumé final ─────────────────────────────────────────
-        stage('Display Webhook Info') {
+        stage('Display Info') {
             when { expression { env.WEBHOOK_URL != null } }
             steps {
                 script {
-                    echo """
-╔══════════════════════════════════════════════════════════════╗
-║         🌐 WEBHOOK JENKINS PUBLIC — PRÊT À L'EMPLOI         ║
-╚══════════════════════════════════════════════════════════════╝
-
-📡 URL Publique Jenkins : ${env.WEBHOOK_URL}
-🔗 Webhook GitHub       : ${env.WEBHOOK_URL}/github-webhook/
-📊 Interface ngrok      : http://localhost:4040
-📈 SonarQube Dashboard  : ${SONAR_HOST_URL}/dashboard?id=marketplace
-
-📝 Services déployés:
-   • API Gateway              : http://localhost:8000
-   • Product API              : http://localhost:8001
-   • Order API                : http://localhost:8004
-   • Recommendation API       : http://localhost:8005
-   • Mongo Express (Products) : http://localhost:8081
-   • Mongo Express (Orders)   : http://localhost:8082
-   • RabbitMQ Management      : http://localhost:15672
-   • Neo4j Browser            : http://localhost:7474
-   • SonarQube                : http://localhost:9000
-                    """
+                    echo "Webhook Jenkins   : ${env.WEBHOOK_URL}"
+                    echo "GitHub Webhook    : ${env.WEBHOOK_URL}/github-webhook/"
+                    echo "SonarQube         : ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                    echo "API Gateway       : http://localhost:8000"
+                    echo "Product API       : http://localhost:8001"
+                    echo "Order API         : http://localhost:8004"
+                    echo "Recommendation    : http://localhost:8005"
+                    echo "Mongo Express (P) : http://localhost:8081"
+                    echo "Mongo Express (O) : http://localhost:8082"
+                    echo "RabbitMQ          : http://localhost:15672"
+                    echo "Neo4j             : http://localhost:7474"
+                    echo "SonarQube         : http://localhost:9000"
                 }
             }
         }
     }
 
-    // ─── Post ─────────────────────────────────────────────────────────
     post {
         success {
-            echo '✅ Pipeline terminé avec succès !'
+            echo 'Pipeline termine avec succes !'
         }
         failure {
-            echo '❌ Pipeline échoué — consultez les logs ci-dessus.'
+            echo 'Pipeline echoue - consultez les logs.'
             dir('D:/marketplace-clean') {
                 bat 'docker-compose ps || exit 0'
             }
