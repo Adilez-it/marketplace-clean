@@ -157,56 +157,60 @@ pipeline {
         //   => waitForQualityGate doit rester dans withSonarQubeEnv pour avoir les variables injectees
         // ---------------------------------------------------------------
         stage('SonarQube Analysis + Quality Gate') {
-            environment {
-                SONAR_TOKEN = credentials('sonar-token-id')
-            }
-            steps {
-                withSonarQubeEnv('SonarQube Local') {
-                    script {
-                        dir('D:/marketplace-clean') {
+    environment {
+        SONAR_TOKEN = credentials('sonar-token-id')
+    }
+    steps {
+        withSonarQubeEnv('SonarQube Local') {
+            script {
+                dir('D:/marketplace-clean') {
 
-                            // Verifie que le scanner existe
-                            bat 'if not exist "%SONAR_SCANNER%" (echo ERREUR: sonarscanner introuvable && exit 1)'
+                    // Vérifie que le scanner existe
+                    bat 'if not exist "%SONAR_SCANNER%" (echo ERREUR: sonarscanner introuvable && exit 1)'
 
-                            // BEGIN
-                            bat "\"%SONAR_SCANNER%\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
+                    // BEGIN
+                    bat "\"%SONAR_SCANNER%\" begin /k:\"marketplace\" /n:\"Marketplace Microservices\" /v:\"1.0\" /d:sonar.host.url=%SONAR_HOST_URL% /d:sonar.token=%SONAR_TOKEN% /d:sonar.cs.opencover.reportsPaths=**/TestResults/**/coverage.opencover.xml /d:sonar.exclusions=**/bin/**,**/obj/**,**/Migrations/** /d:sonar.coverage.exclusions=**/Tests/**,**/Program.cs /d:sonar.sourceEncoding=UTF-8"
 
-                            // BUILD
-                            bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
-                            bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
-                            bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
-                            bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
+                    // BUILD
+                    bat 'dotnet build Product.API/Product.API.csproj --configuration Release'
+                    bat 'dotnet build Order.API/Order.API.csproj --configuration Release'
+                    bat 'dotnet build Recommendation.API/Recommendation.API.csproj --configuration Release'
+                    bat 'dotnet build ApiGateway/ApiGateway.csproj --configuration Release'
 
-                            // TESTS avec couverture OpenCover
-                            bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
-                            bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
-                            bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
+                    // TESTS
+                    bat 'dotnet test Tests/Product.API.Tests/Product.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Product/coverage.opencover.xml'
+                    bat 'dotnet test Tests/Order.API.Tests/Order.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Order/coverage.opencover.xml'
+                    bat 'dotnet test Tests/Recommendation.API.Tests/Recommendation.API.Tests.csproj --configuration Release --no-build /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=TestResults/Recommendation/coverage.opencover.xml'
 
-                            // END
-                            bat "\"%SONAR_SCANNER%\" end /d:sonar.token=%SONAR_TOKEN%"
+                    // END
+                    bat "\"%SONAR_SCANNER%\" end /d:sonar.token=%SONAR_TOKEN%"
 
-                            // Copie report-task.txt dans le workspace Jenkins
-                            // waitForQualityGate cherche ce fichier dans %WORKSPACE%
-                            // sonarscanner le genere dans D:\marketplace-clean\.sonarqube\out\
-                            bat 'copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\report-task.txt" "%WORKSPACE%\\report-task.txt"'
-                        }
+                    // ✅ Copie report-task.txt du bon endroit (maintenant qu'on connaît le chemin exact)
+                    echo '📋 Copie de report-task.txt vers le workspace Jenkins...'
+                    bat '''
+                        copy /Y "D:\\marketplace-clean\\.sonarqube\\out\\.sonar\\report-task.txt" "%WORKSPACE%\\report-task.txt"
+                        echo ✅ Fichier copié avec succès
+                        echo 📄 Contenu du fichier:
+                        type "%WORKSPACE%\\report-task.txt"
+                    '''
+                }
 
-                        // waitForQualityGate DOIT etre dans withSonarQubeEnv
-                        echo 'Attente du Quality Gate SonarQube...'
-                        timeout(time: 5, unit: 'MINUTES') {
-                            def qg = waitForQualityGate abortPipeline: false
-                            if (qg.status != 'OK') {
-                                echo "Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
-                                // Decommenter pour bloquer le pipeline :
-                                // error("Quality Gate FAILED: ${qg.status}")
-                            } else {
-                                echo 'Quality Gate : PASSED'
-                            }
-                        }
+                // waitForQualityGate dans withSonarQubeEnv
+                echo '⏳ Attente du Quality Gate SonarQube...'
+                timeout(time: 5, unit: 'MINUTES') {
+                    def qg = waitForQualityGate abortPipeline: false
+                    if (qg.status != 'OK') {
+                        echo "⚠️ Quality Gate : ${qg.status} - voir ${SONAR_HOST_URL}/dashboard?id=marketplace"
+                        // Décommenter pour bloquer le pipeline si qualité insuffisante
+                        // error "Quality Gate FAILED: ${qg.status}"
+                    } else {
+                        echo '✅ Quality Gate : PASSED'
                     }
                 }
             }
         }
+    }
+}
 
         stage('Docker Build') {
             steps {
